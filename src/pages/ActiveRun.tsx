@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LiveRunMap from '@/components/LiveRunMap';
 import RunContextPanel from '@/components/RunContextPanel';
 import TerritoryClickPopup from '@/components/TerritoryClickPopup';
+import RunSummaryExport from '@/components/RunSummaryExport';
 import { calculateTotalDistance, validateRunSpeed, getTerritoriesClaimed } from '@/lib/geoutils';
 import { db } from '@/lib/db';
 import { validateRunSubmission, calculateTerritoryAcquisition, GPSPoint as TerritoryGPSPoint } from '@/lib/territory';
@@ -54,6 +55,15 @@ const ActiveRun = () => {
   const [clickedTerritory, setClickedTerritory] = useState<any>(null);
   const [territoryDetails, setTerritoryDetails] = useState<any>(null);
   const [activityType, setActivityType] = useState<'run' | 'cycle'>('run');
+  const [showSummaryExport, setShowSummaryExport] = useState(false);
+  const [savedRunSummary, setSavedRunSummary] = useState<{
+    distance: number;
+    time: string;
+    pace: string;
+    territoriesClaimed: number;
+    speed: number;
+    gpsPoints: { lat: number; lng: number; timestamp: number }[];
+  } | null>(null);
   
   const watchIdRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -404,8 +414,17 @@ const ActiveRun = () => {
         });
       }
 
-      // Navigate back to home
-      navigate('/');
+      // Show export/summary modal instead of navigating away
+      const avgSpeed = durationSec > 0 ? (distance / (durationSec / 3600)) : 0;
+      setSavedRunSummary({
+        distance,
+        time: formatTime(elapsedTime),
+        pace: calculatePace(),
+        territoriesClaimed: conqueredTiles.length,
+        speed: avgSpeed,
+        gpsPoints: points.map(p => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp })),
+      });
+      setShowSummaryExport(true);
     } catch (error) {
       console.error('Failed to save run locally:', error);
       toast({
@@ -413,9 +432,8 @@ const ActiveRun = () => {
         description: 'Could not save your run. Please try again.',
         variant: 'destructive',
       });
+      resetRun();
     }
-
-    resetRun();
   };
 
   // Show stop confirmation
@@ -912,6 +930,25 @@ const ActiveRun = () => {
           territory={territoryDetails}
           onClose={() => setTerritoryDetails(null)}
           currentUserId={user?.id}
+        />
+      )}
+
+      {/* Run Summary Export Modal - Strava-like share screen */}
+      {showSummaryExport && savedRunSummary && (
+        <RunSummaryExport
+          distance={savedRunSummary.distance}
+          time={savedRunSummary.time}
+          pace={savedRunSummary.pace}
+          territoriesClaimed={savedRunSummary.territoriesClaimed}
+          speed={savedRunSummary.speed}
+          activityType={activityType}
+          gpsPoints={savedRunSummary.gpsPoints}
+          onClose={() => {
+            setShowSummaryExport(false);
+            setSavedRunSummary(null);
+            resetRun();
+            navigate('/');
+          }}
         />
       )}
     </div>
