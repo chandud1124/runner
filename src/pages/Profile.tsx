@@ -155,7 +155,7 @@ const Profile = () => {
             </div>
             <div className="bg-muted/30 rounded-xl p-4 text-center">
               <p className="text-3xl font-display font-bold text-gradient-cyber">
-                {user?.stats?.total_distance_km?.toFixed?.(1) || 0}
+                {user?.stats?.total_distance_km ? parseFloat(String(user.stats.total_distance_km)).toFixed(1) : '0'}
               </p>
               <p className="text-sm text-muted-foreground">km Total Distance</p>
             </div>

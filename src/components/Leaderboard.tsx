@@ -38,7 +38,11 @@ const Leaderboard = () => {
       rank: u.rank,
       name: u.username,
       territories: u.territories_owned,
-      km: typeof u.total_distance_km === 'number' ? u.total_distance_km.toFixed(1) : '0.0',
+      km: typeof u.total_distance_km === 'number' 
+        ? u.total_distance_km.toFixed(1) 
+        : typeof u.total_distance_km === 'string'
+        ? parseFloat(u.total_distance_km).toFixed(1)
+        : '0.0',
       streak: typeof u.total_runs === 'number' ? `${u.total_runs}` : '-',
       change: null as null | 'up',
     }));

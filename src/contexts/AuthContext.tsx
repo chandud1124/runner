@@ -7,12 +7,15 @@ export interface UserProfile {
   id: number;
   email: string;
   username: string;
-  stats: {
-    territories_owned: number;
-    total_distance_km: number;
-    area_km2: number;
+  avatar?: string;
+  stats?: {
+    territories_owned?: number;
+    total_distance_km?: number | string;
+    area_km2?: number;
+    currentStreak?: number;
+    rank?: number;
   };
-  created_at: string;
+  created_at?: string;
 }
 
 interface AuthContextType {
