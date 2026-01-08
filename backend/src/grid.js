@@ -1,5 +1,5 @@
 import geohash from 'ngeohash';
-import { polygon, area } from '@turf/turf';
+import { polygon, area, booleanIntersects } from '@turf/turf';
 
 const TILE_PRECISION = 7; // ~150m cells (smaller = more territories per run)
 
@@ -40,7 +40,6 @@ function approximateArea(tileId) {
 export function getTilesFromGeometry(geometry) {
   if (!geometry || !geometry.coordinates) return [];
   
-  const { booleanIntersects } = require('@turf/turf');
   const geoPoly = { type: 'Feature', geometry };
   
   // Get bounding box of the geometry
