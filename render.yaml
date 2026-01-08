@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: territory-runner-api
+    env: node
+    plan: free
+    buildCommand: "cd backend && npm install"
+    startCommand: "cd backend && npm run dev"
+    envVars:
+      - key: DATABASE_URL
+        scope: build
+        sync: false
+      - key: JWT_SECRET
+        scope: build
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: REDIS_URL
+        scope: build
+        sync: false
+    disk:
+      name: postgres_data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10
