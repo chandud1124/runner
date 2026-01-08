@@ -386,7 +386,9 @@ router.post('/sync', requireAuth, async (req, res) => {
       // Refresh owned counts after all runs
       const { rows: ownedRows } = await client.query('SELECT COUNT(*)::int AS c FROM territories WHERE owner_id = $1', [req.userId]);
       const owned = ownedRows[0].c || 0;
-      const areaKm2 = owned * tileAreaKm2(''); // Approximate
+      // Approximate per-tile area for geohash precision 7 (~0.02 km^2)
+      const areaPerTileKm2 = 0.02;
+      const areaKm2 = owned * areaPerTileKm2;
       await client.query(
         'UPDATE user_stats SET territories_owned = $1, area_km2 = $2, updated_at = NOW() WHERE user_id = $3',
         [owned, areaKm2, req.userId]
