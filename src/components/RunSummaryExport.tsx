@@ -3,6 +3,7 @@ import { Share2, Download, Copy, X, Clock, Zap, Map, Route, Flag, ChevronLeft } 
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
+import { trackEvent, trackSocialEvent } from '@/lib/analytics';
 
 interface GPSPoint {
   lat: number;
@@ -193,6 +194,9 @@ const RunSummaryExport = ({
       link.download = `run-${distance.toFixed(1)}km-${suffix}-${new Date().toISOString().slice(0,10)}.png`;
       link.click();
       
+      // Track successful export
+      trackEvent('export_download', 'engagement', exportType || 'unknown', Math.round(distance * 10));
+
       toast({
         title: 'Downloaded!',
         description: 'Your run image has been saved',
@@ -213,6 +217,9 @@ const RunSummaryExport = ({
     const summary = generateSummaryText();
     const intent = `https://www.strava.com/mobile/post?message=${encodeURIComponent(summary)}`;
     window.open(intent, '_blank');
+
+    // Track Strava share
+    trackSocialEvent('share_strava', 'strava');
   };
 
   const handleNativeShare = async () => {
@@ -222,6 +229,9 @@ const RunSummaryExport = ({
           title: 'My Run',
           text: generateSummaryText(),
         });
+
+        // Track successful native share
+        trackSocialEvent('share_native', 'native');
       } catch (err) {
         // User cancelled
       }

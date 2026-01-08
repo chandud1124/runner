@@ -15,6 +15,7 @@ import RunSummaryExport from '@/components/RunSummaryExport';
 import { calculateTotalDistance, validateRunSpeed, getTerritoriesClaimed } from '@/lib/geoutils';
 import { db } from '@/lib/db';
 import { validateRunSubmission, calculateTerritoryAcquisition, GPSPoint as TerritoryGPSPoint } from '@/lib/territory';
+import { trackRunEvent, trackTerritoryEvent } from '@/lib/analytics';
 
 interface GPSPoint {
   lat: number;
@@ -249,7 +250,7 @@ const ActiveRun = () => {
   // Start run
   const handleStart = () => {
     console.log('🏃 Starting run...', { gpsStatus, gpsAccuracy, currentPosition });
-    
+
     setIsRunning(true);
     setIsPaused(false);
     isRunningRef.current = true;
@@ -260,6 +261,13 @@ const ActiveRun = () => {
     intervalRef.current = setInterval(() => {
       setElapsedTime(Date.now() - startTimeRef.current);
     }, 100);
+
+    // Track run start
+    trackRunEvent('run_started', {
+      userId: user?.id,
+      gpsAccuracy: gpsAccuracy,
+      activityType: activityType
+    });
 
     toast({
       title: 'Run Started',
@@ -412,7 +420,25 @@ const ActiveRun = () => {
           title: 'Territory Conquered! 🗺️',
           description: `You claimed ${conqueredTiles.length} new tile${conqueredTiles.length > 1 ? 's' : ''}!`,
         });
+
+        // Track territory conquest
+        trackTerritoryEvent('territories_conquered', {
+          userId: user?.id,
+          count: conqueredTiles.length,
+          runDistance: distance,
+          runDuration: durationSec
+        });
       }
+
+      // Track successful run completion
+      trackRunEvent('run_completed', {
+        userId: user?.id,
+        distance: distance,
+        duration: durationSec,
+        territoriesConquered: conqueredTiles.length,
+        activityType: activityType,
+        avgSpeed: durationSec > 0 ? (distance / (durationSec / 3600)) : 0
+      });
 
       // Show export/summary modal instead of navigating away
       const avgSpeed = durationSec > 0 ? (distance / (durationSec / 3600)) : 0;

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiFetch, setToken } from '@/lib/api';
 import { db } from '@/lib/db';
+import { trackUserAction } from '@/lib/analytics';
 
 export interface UserProfile {
   id: number;
@@ -108,8 +109,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         stats: me.stats,
         lastSynced: Date.now()
       });
+
+      // Track successful login
+      trackUserAction('login_success', { userId: me.id, username: me.username });
+
       return { success: true };
     } catch (err: any) {
+      // Track failed login
+      trackUserAction('login_failed', { error: err.message });
       return { success: false, error: err.message || 'Login failed' };
     }
   };
@@ -131,8 +138,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         stats: me.stats,
         lastSynced: Date.now()
       });
+
+      // Track successful signup
+      trackUserAction('signup_success', { userId: me.id, username: me.username });
+
       return { success: true };
     } catch (err: any) {
+      // Track failed signup
+      trackUserAction('signup_failed', { error: err.message });
       return { success: false, error: err.message || 'Signup failed' };
     }
   };

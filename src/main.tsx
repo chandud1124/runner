@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initGA } from "./lib/analytics";
 
 // Fix Leaflet default icon paths
 import L from 'leaflet';
@@ -15,5 +16,8 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// Initialize Google Analytics
+initGA();
 
 createRoot(document.getElementById("root")!).render(<App />);
