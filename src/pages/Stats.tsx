@@ -330,6 +330,16 @@ const Stats = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  navigate(`/run/${run.id}/visualize`);
+                                }}
+                                className="p-2 rounded-lg bg-white/5 hover:bg-purple-500/20 text-white/40 hover:text-purple-400 transition-all"
+                                title="Visualize Territory"
+                              >
+                                <MapPin className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setExportRun(run);
                                 }}
                                 className="p-2 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-white/40 hover:text-cyan-400 transition-all"

@@ -26,13 +26,33 @@ router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 50, 500);
     const { rows } = await pool.query(
-      'SELECT id, user_id, geojson, distance_km, duration_sec, created_at FROM runs ORDER BY created_at DESC LIMIT $1',
+      'SELECT id, user_id, geojson, distance_km, duration_sec, created_at, raw_points FROM runs ORDER BY created_at DESC LIMIT $1',
       [limit]
     );
     return res.json({ runs: rows });
   } catch (error) {
     console.error('Fetch runs error:', error);
     return res.status(500).json({ ok: false, error: 'Failed to fetch runs' });
+  }
+});
+
+// Get single run by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      'SELECT id, user_id, geojson, distance_km, duration_sec, created_at, raw_points, activity_type FROM runs WHERE id = $1',
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Run not found' });
+    }
+    
+    return res.json({ ok: true, run: rows[0] });
+  } catch (error) {
+    console.error('Fetch run error:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to fetch run' });
   }
 });
 

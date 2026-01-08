@@ -15,6 +15,7 @@ import Competitions from "@/pages/Competitions";
 import Social from "@/pages/Social";
 import Stats from "@/pages/Stats";
 import RunDetails from "@/pages/RunDetails";
+import RunVisualization from "@/pages/RunVisualization";
 import Invite from "@/pages/Invite";
 import Team from "@/pages/Team";
 import PrivacyZones from "@/pages/PrivacyZones";
@@ -77,6 +78,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <RunDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/run/:runId/visualize"
+            element={
+              <ProtectedRoute>
+                <RunVisualization />
               </ProtectedRoute>
             }
           />
