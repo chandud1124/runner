@@ -8,7 +8,8 @@ export function tileIdFromCoord(lat, lon) {
 }
 
 export function polygonFromTile(tileId) {
-  const { minlat, maxlat, minlon, maxlon } = geohash.decode_bbox(tileId);
+  const bbox = geohash.decode_bbox(tileId); // Returns [minlat, minlon, maxlat, maxlon]
+  const [minlat, minlon, maxlat, maxlon] = bbox;
   // Create a closed polygon from bbox coordinates
   const coords = [
     [minlon, minlat],
