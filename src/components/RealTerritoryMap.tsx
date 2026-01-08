@@ -45,6 +45,7 @@ type Run = {
     };
   };
   distance_km: number;
+  activity_type?: 'run' | 'cycle';
 };
 
 // Custom user location icon
@@ -158,6 +159,19 @@ function CyclingOnlyToggle({ enabled, onToggle, visible }: { enabled: boolean; o
   );
 }
 
+// Toggle between grid tiles and organic run paths
+function ViewModeToggle({ showPaths, onToggle }: { showPaths: boolean; onToggle: (enabled: boolean) => void }) {
+  return (
+    <div className="absolute bottom-44 right-2 z-[800] bg-white rounded-lg shadow-lg p-3 transition-all border border-gray-200">
+      <div className="flex items-center gap-2">
+        <span className="text-sm">{showPaths ? '🏃' : '🔲'}</span>
+        <span className="text-sm font-medium text-gray-700">{showPaths ? 'Run Paths' : 'Grid Tiles'}</span>
+        <Switch checked={showPaths} onCheckedChange={onToggle} />
+      </div>
+    </div>
+  );
+}
+
 type MapFilter = 'mine' | 'friends' | 'present';
 
 type TerritoryInfo = {
@@ -201,6 +215,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
   const [showTerritoryPopup, setShowTerritoryPopup] = useState(false);
   const [cyclingOnly, setCyclingOnly] = useState(false);
   const [mineHistoryTerritories, setMineHistoryTerritories] = useState<Territory[] | null>(null);
+  const [showRunPaths, setShowRunPaths] = useState(true); // Show organic run paths instead of grid tiles
 
   useEffect(() => {
     if (filter !== 'mine' && cyclingOnly) {
@@ -316,7 +331,8 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
             console.warn('Team territories not available:', err);
             return { teams: [], individual: [] };
           }),
-          showRuns ? apiFetch('/runs?limit=100') : Promise.resolve({ runs: [] }),
+          // Always fetch runs for run paths view (or when showRuns is enabled)
+          apiFetch('/runs?limit=100'),
           apiFetch('/friends').catch(() => ({ friends: [] })),
           apiFetch('/teams/my-teams').catch(() => ({ teams: [] }))
         ]);
@@ -683,6 +699,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
 
       <ZoomButtons onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
       <LocationButton onLocate={handleLocateUser} />
+      <ViewModeToggle showPaths={showRunPaths} onToggle={setShowRunPaths} />
       <CyclingOnlyToggle enabled={cyclingOnly} onToggle={setCyclingOnly} visible={filter === 'mine'} />
       <TeamToggle enabled={teamViewEnabled} onToggle={setTeamViewEnabled} />
       
@@ -702,9 +719,40 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
           maxZoom={19}
         />
 
-        {/* Territories - Team View or Individual View */}
-        {teamViewEnabled ? (
-          // Team View: Show territories grouped by teams
+        {/* Territories - Show as Run Paths (organic) or Grid Tiles (squares) */}
+        {showRunPaths ? (
+          // Run Paths View: Show organic buffered run polygons from runs table
+          getFilteredRuns().map((run) => {
+            const geom = run.geojson?.geometry;
+            if (!geom?.coordinates) return null;
+            
+            const isPolygon = geom.type === 'Polygon';
+            const color = getRunColor(run.user_id);
+            const isOwn = run.user_id === user?.id;
+
+            if (isPolygon) {
+              const coords = geom.coordinates[0] as number[][];
+              if (coords.length === 0) return null;
+              const positions: LatLngExpression[] = coords.map(([lng, lat]) => [lat, lng]);
+              
+              return (
+                <Polygon
+                  key={`run-territory-${run.id}`}
+                  positions={positions}
+                  pathOptions={{
+                    color: isOwn ? '#22c55e' : color,
+                    weight: 2,
+                    opacity: 0.8,
+                    fillColor: isOwn ? '#22c55e' : color,
+                    fillOpacity: 0.35,
+                  }}
+                />
+              );
+            }
+            return null;
+          })
+        ) : teamViewEnabled ? (
+          // Team View: Show territories grouped by teams (grid tiles)
           <>
             {teamTerritories.map((team) => 
               team.territories.map((territory) => {
@@ -747,7 +795,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
             })}
           </>
         ) : (
-          // Individual View: Show territories with personal colors
+          // Individual View: Show territories with personal colors (grid tiles)
           getFilteredTerritories().map((territory) => {
             const coords = territory.geojson?.geometry?.coordinates?.[0] || [];
             if (coords.length === 0) return null;
@@ -792,28 +840,6 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
             );
           })
         )}
-
-        {/* Running Routes (Polylines) - Filtered */}
-        {showRuns && getFilteredRuns().map((run) => {
-          const coords = run.geojson?.geometry?.coordinates || [];
-          if (coords.length === 0) return null;
-          
-          // Convert from [lng, lat] to [lat, lng] for Leaflet
-          const positions: LatLngExpression[] = coords.map(([lng, lat]) => [lat, lng]);
-          const color = getRunColor(run.user_id);
-
-          return (
-            <Polyline
-              key={run.id}
-              positions={positions}
-              pathOptions={{
-                color: color,
-                weight: 3,
-                opacity: 0.7,
-              }}
-            />
-          );
-        })}
 
         {/* User Location Marker */}
         {userLocation && (
