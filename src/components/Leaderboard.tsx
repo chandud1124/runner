@@ -1,15 +1,6 @@
 import { motion } from "framer-motion";
 import { Crown, TrendingUp, MapPin, Zap } from "lucide-react";
 
-// TODO: Replace with real data from /api/leaderboard endpoint
-// const leaderboardData = [
-//   { rank: 1, name: "SpeedDemon", territories: 47, km: 234.5, streak: 12, change: "up" },
-//   { rank: 2, name: "RunnerKing", territories: 42, km: 198.2, streak: 8, change: "up" },
-//   { rank: 3, name: "NightRunner", territories: 38, km: 176.8, streak: 15, change: "down" },
-//   { rank: 4, name: "MarathonMike", territories: 35, km: 156.3, streak: 6, change: "up" },
-//   { rank: 5, name: "TrailBlazer", territories: 31, km: 142.1, streak: 4, change: "same" },
-// ];
-
 const Leaderboard = () => {
   // TODO: Fetch real leaderboard data from API
   const leaderboardData = [];

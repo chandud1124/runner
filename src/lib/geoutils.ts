@@ -2,6 +2,8 @@
  * Geospatial utility functions for real GPS-accurate distance calculations
  */
 
+import geohash from 'ngeohash';
+
 /**
  * Calculate distance between two GPS coordinates using Haversine formula
  * Returns distance in meters
@@ -152,4 +154,27 @@ export function getTerritoryBuffer(distanceKm: number): number {
   // For every 1km run, create a 50m buffer zone (0.05km)
   // This can be adjusted based on your game mechanics
   return Math.max(0.03, distanceKm * 0.05); // minimum 30m buffer
+}
+
+/**
+ * Calculate number of unique territories claimed from GPS points
+ * Uses same tile precision as backend (precision 7 = ~150m tiles)
+ */
+export function getTerritoriesClaimed(points: Array<{ lat: number; lng: number }>): number {
+  if (points.length === 0) return 0;
+  
+  try {
+    const TILE_PRECISION = 7; // Same as backend
+    
+    const tileIds = new Set<string>();
+    points.forEach(p => {
+      const tileId = geohash.encode(p.lat, p.lng, TILE_PRECISION);
+      tileIds.add(tileId);
+    });
+    
+    return tileIds.size;
+  } catch (error) {
+    console.error('Error calculating territories:', error);
+    return 0;
+  }
 }

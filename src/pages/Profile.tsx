@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import BottomNavigation from '@/components/BottomNavigation';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -176,6 +177,8 @@ const Profile = () => {
           </div>
         </motion.div>
       </main>
+
+      <BottomNavigation />
     </div>
   );
 };

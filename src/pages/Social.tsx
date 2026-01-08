@@ -4,13 +4,14 @@ import { Users, UserPlus, Mail, Check, X, Shield, ArrowLeft } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+import BottomNavigation from '@/components/BottomNavigation';
 
 interface Friend {
   id: number;
@@ -57,9 +58,9 @@ const Social = () => {
         api.get('/teams/my-teams'),
       ]);
 
-      setFriends(friendsRes.data.friends || []);
-      setTeams(teamsRes.data.teams || []);
-      setMyTeams(myTeamsRes.data.teams || []);
+      setFriends(friendsRes.friends || []);
+      setTeams(teamsRes.teams || []);
+      setMyTeams(myTeamsRes.teams || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast({
@@ -341,6 +342,9 @@ const Social = () => {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add Friend</DialogTitle>
+                    <DialogDescription>
+                      Send a friend request to connect with other runners.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
                     <div>
@@ -397,6 +401,9 @@ const Social = () => {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create New Team</DialogTitle>
+                    <DialogDescription>
+                      Create a team to compete together in competitions and share territory conquests.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
                     <div>
@@ -467,6 +474,8 @@ const Social = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <BottomNavigation />
     </div>
   );
 };

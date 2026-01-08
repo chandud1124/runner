@@ -5,7 +5,7 @@ import { requireAuth } from './middleware/auth.js';
 import { tileIdFromCoord, polygonFromTile, tileAreaKm2 } from './grid.js';
 
 const router = express.Router();
-const MAX_SPEED_M_S = 10; // simple fair-play threshold
+const MAX_SPEED_M_S = 20; // anti-cheat threshold (allows GPS inaccuracy spikes, blocks vehicles)
 const BUFFER_KM = 0.05; // ~50m buffer around path
 
 // GET /runs - Fetch recent runs
@@ -61,10 +61,13 @@ function haversine(a, b) {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { points = [], distanceKm, durationSec } = req.body || {};
+    console.log(`[RUN] User ${req.userId} submitting run with ${points.length} points, ${distanceKm}km`);
+    
     const validationError = validateRun(points);
     if (validationError) return res.status(400).json({ ok: false, error: validationError });
 
     const maxSpeed = maxSegmentSpeed(points);
+    console.log(`[RUN] Max speed detected: ${maxSpeed.toFixed(2)} m/s (limit: ${MAX_SPEED_M_S} m/s)`);
     if (maxSpeed > MAX_SPEED_M_S) {
       return res.status(400).json({ ok: false, error: 'Run rejected: speed too high (possible vehicle).' });
     }
@@ -75,6 +78,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Determine tiles touched based on points (fast) and fallback to centroid of buffered polygon
     const tileIds = new Set(points.map((p) => tileIdFromCoord(p.lat, p.lng)));
+    console.log(`[RUN] Tiles touched: ${tileIds.size} tiles - ${Array.from(tileIds).join(', ')}`);
+    
     if (tileIds.size === 0 && buffered?.geometry?.coordinates?.length) {
       const [lng, lat] = buffered.geometry.coordinates[0][0];
       tileIds.add(tileIdFromCoord(lat, lng));

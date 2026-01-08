@@ -12,6 +12,7 @@ import friendRouter from './friendRoutes.js';
 import teamRouter from './teamRoutes.js';
 import notificationRouter from './notificationRoutes.js';
 import privacyRouter from './privacyRoutes.js';
+import statsRouter from './statsRoutes.js';
 
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/friends', friendRouter);
 app.use('/teams', teamRouter);
 app.use('/notifications', notificationRouter);
 app.use('/privacy', privacyRouter);
+app.use('/stats', statsRouter);
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, message: 'API is running' });

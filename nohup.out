@@ -17,3 +17,8 @@
 {"level":"info","ts":1767786480.7989151,"logger":"tls","msg":"storage cleaning happened too recently; skipping for now","storage":"FileStorage:/Users/chandu/Library/Application Support/Caddy","instance":"82c76eed-5be6-486f-a7fc-4e9efac53cb8","try_again":1767872880.7989151,"try_again_in":86399.99999975}
 {"level":"info","ts":1767786480.799003,"logger":"tls","msg":"finished cleaning storage units"}
 {"level":"info","ts":1767794060.5452008,"msg":"not implemented","signal":"SIGHUP"}
+{"level":"info","ts":1767811062.5922291,"msg":"shutting down apps, then terminating","signal":"SIGTERM"}
+{"level":"warn","ts":1767811062.598092,"msg":"exiting; byeee!! 👋","signal":"SIGTERM"}
+{"level":"info","ts":1767811062.604374,"logger":"http","msg":"servers shutting down with eternal grace period"}
+{"level":"info","ts":1767811062.618119,"logger":"admin","msg":"stopped previous server","address":"localhost:2019"}
+{"level":"info","ts":1767811062.618349,"msg":"shutdown complete","signal":"SIGTERM","exit_code":0}

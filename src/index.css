@@ -238,12 +238,32 @@
     z-index: 500 !important;
   }
 
-  .leaflet-control-container .leaflet-top {
-    top: 10px;
+  /* Adjust Leaflet zoom controls position to avoid header/footer overlap */
+  .leaflet-control-container .leaflet-top.leaflet-left {
+    top: 16px !important;
+    left: 16px !important;
   }
 
   .leaflet-control-container .leaflet-bottom {
-    bottom: 10px;
+    bottom: 16px !important;
+  }
+
+  /* Ensure controls are contained within map boundaries and don't overflow */
+  .leaflet-control-zoom {
+    margin: 0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+  }
+
+  /* Ensure zoom controls stay within their container */
+  .leaflet-control-zoom a {
+    display: block !important;
+  }
+
+  /* Prevent any positioning conflicts */
+  .leaflet-top,
+  .leaflet-left {
+    position: absolute !important;
   }
 }
 

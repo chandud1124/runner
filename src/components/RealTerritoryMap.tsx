@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Polygon, Polyline, useMap, Circle, Marker } fr
 import { LatLngExpression, Icon, DivIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiFetch } from '@/lib/api';
-import { Crosshair } from 'lucide-react';
+import { Crosshair, Plus, Minus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Territory = {
@@ -75,12 +75,34 @@ function MapBoundsHandler({ territories }: { territories: Territory[] }) {
   return null;
 }
 
+// Custom Zoom Controls
+function ZoomButtons({ onZoomIn, onZoomOut }: { onZoomIn: () => void; onZoomOut: () => void }) {
+  return (
+    <div className="absolute top-2 left-2 z-[800] flex flex-col gap-1">
+      <button
+        onClick={onZoomIn}
+        className="bg-white hover:bg-gray-50 text-gray-700 rounded-lg shadow-lg p-2.5 transition-all border border-gray-200"
+        title="Zoom in"
+      >
+        <Plus className="w-5 h-5" />
+      </button>
+      <button
+        onClick={onZoomOut}
+        className="bg-white hover:bg-gray-50 text-gray-700 rounded-lg shadow-lg p-2.5 transition-all border border-gray-200"
+        title="Zoom out"
+      >
+        <Minus className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}
+
 // Location button component
 function LocationButton({ onLocate }: { onLocate: () => void }) {
   return (
     <button
       onClick={onLocate}
-      className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-50 text-gray-700 rounded-lg shadow-lg p-2.5 transition-all border border-gray-200"
+      className="absolute top-2 right-2 z-[800] bg-white hover:bg-gray-50 text-gray-700 rounded-lg shadow-lg p-2.5 transition-all border border-gray-200"
       title="Show my location"
     >
       <Crosshair className="w-5 h-5" />
@@ -88,10 +110,13 @@ function LocationButton({ onLocate }: { onLocate: () => void }) {
   );
 }
 
-const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: { 
+type MapFilter = 'current' | 'mine' | 'friends' | 'global';
+
+const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'mine' }: { 
   center?: [number, number]; 
   zoom?: number;
   showRuns?: boolean;
+  filter?: MapFilter;
 }) => {
   const { user } = useAuth();
   const [territories, setTerritories] = useState<Territory[]>([]);
@@ -226,6 +251,58 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
     };
   };
 
+  // Filter territories based on active filter
+  const getFilteredTerritories = () => {
+    if (!user) return territories;
+    
+    switch (filter) {
+      case 'current':
+        // Only show current run (handled separately in ActiveRun)
+        return [];
+      case 'mine':
+        // Only show user's own territories
+        return territories.filter(t => t.owner_id === user.id);
+      case 'friends':
+        // Show friends and team members' territories
+        return territories.filter(t => 
+          friendIds.has(t.owner_id) || teamMemberIds.has(t.owner_id)
+        );
+      case 'global':
+        // Show all other players (not user, not friends, not team)
+        return territories.filter(t => 
+          t.owner_id !== user.id && 
+          !friendIds.has(t.owner_id) && 
+          !teamMemberIds.has(t.owner_id)
+        );
+      default:
+        return territories;
+    }
+  };
+
+  // Filter runs based on active filter
+  const getFilteredRuns = () => {
+    if (!user) return runs;
+    
+    switch (filter) {
+      case 'current':
+        return [];
+      case 'mine':
+        return runs.filter(r => r.user_id === user.id);
+      case 'friends':
+        return runs.filter(r => 
+          friendIds.has(r.user_id) || teamMemberIds.has(r.user_id)
+        );
+      case 'global':
+        return runs.filter(r => 
+          r.user_id !== user.id && 
+          !friendIds.has(r.user_id) && 
+          !teamMemberIds.has(r.user_id)
+        );
+      default:
+        return runs;
+    }
+  };
+
   // Color for run routes
   const getRunColor = (userId: number) => {
     if (user && userId === user.id) {
@@ -238,6 +315,20 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
       return '#8E24AA'; // Purple for team members
     }
     return '#E53935'; // Red for others
+  };
+
+  // Handle zoom in
+  const handleZoomIn = () => {
+    if (mapInstance) {
+      mapInstance.zoomIn();
+    }
+  };
+
+  // Handle zoom out
+  const handleZoomOut = () => {
+    if (mapInstance) {
+      mapInstance.zoomOut();
+    }
   };
 
   // Handle location button click
@@ -293,16 +384,18 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden relative">
+      <ZoomButtons onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
       <LocationButton onLocate={handleLocateUser} />
       
       <MapContainer
         center={initialCenter}
         zoom={zoom}
         className="w-full h-full"
-        zoomControl={true}
+        zoomControl={false}
         style={{ minHeight: '400px' }}
         ref={setMapInstance}
       >
+        
         {/* OpenStreetMap Tiles */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -310,8 +403,8 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
           maxZoom={19}
         />
 
-        {/* Territories (Polygons) */}
-        {territories.map((territory) => {
+        {/* Territories (Polygons) - Filtered */}
+        {getFilteredTerritories().map((territory) => {
           const coords = territory.geojson?.coordinates?.[0] || [];
           if (coords.length === 0) return null;
           
@@ -328,8 +421,8 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
           );
         })}
 
-        {/* Running Routes (Polylines) */}
-        {showRuns && runs.map((run) => {
+        {/* Running Routes (Polylines) - Filtered */}
+        {showRuns && getFilteredRuns().map((run) => {
           const coords = run.geojson?.coordinates || [];
           if (coords.length === 0) return null;
           
@@ -372,7 +465,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false }: {
         )}
 
         {/* Auto-fit bounds */}
-        <MapBoundsHandler territories={territories} />
+        <MapBoundsHandler territories={getFilteredTerritories()} />
       </MapContainer>
     </div>
   );

@@ -4,13 +4,14 @@ import { Trophy, Plus, Users, Calendar, MapPin, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+import BottomNavigation from '@/components/BottomNavigation';
 
 interface Competition {
   id: number;
@@ -208,6 +209,9 @@ const Competitions = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Competition</DialogTitle>
+                <DialogDescription>
+                  Set up a new competition for you and your friends to compete in territory conquest.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div>
@@ -358,6 +362,8 @@ const Competitions = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <BottomNavigation />
     </div>
   );
 };

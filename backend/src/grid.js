@@ -1,7 +1,7 @@
 import geohash from 'ngeohash';
 import { polygon, area } from '@turf/turf';
 
-const TILE_PRECISION = 6; // ~0.6km cells
+const TILE_PRECISION = 7; // ~150m cells (smaller = more territories per run)
 
 export function tileIdFromCoord(lat, lon) {
   return geohash.encode(lat, lon, TILE_PRECISION);
@@ -28,7 +28,7 @@ export function tileAreaKm2(tileId) {
 }
 
 function approximateArea(tileId) {
-  // Rough estimate for precision 6 geohash ~0.36 km^2
-  if (!tileId) return 0.36;
-  return 0.36;
+  // Rough estimate for precision 7 geohash ~0.02 km^2 (150m x 150m)
+  if (!tileId) return 0.02;
+  return 0.02;
 }

@@ -12,6 +12,8 @@ import Profile from "@/pages/Profile";
 import ActiveRun from "@/pages/ActiveRun";
 import Competitions from "@/pages/Competitions";
 import Social from "@/pages/Social";
+import Stats from "@/pages/Stats";
+import RunDetails from "@/pages/RunDetails";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,14 @@ const App = () => (
               }
             />
             <Route
+              path="/run/:id"
+              element={
+                <ProtectedRoute>
+                  <RunDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/competitions"
               element={
                 <ProtectedRoute>
@@ -63,6 +73,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stats"
+              element={
+                <ProtectedRoute>
+                  <Stats />
                 </ProtectedRoute>
               }
             />
