@@ -155,7 +155,7 @@ const RunDetails = () => {
                 <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
                   <div className="text-blue-400 text-sm mb-1">Distance</div>
                   <div className="text-2xl font-bold text-white">
-                    {runData.distanceKm.toFixed(2)} km
+                    {parseFloat(runData.distanceKm).toFixed(2)} km
                   </div>
                 </div>
                 <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">

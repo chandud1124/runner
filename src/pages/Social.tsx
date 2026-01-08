@@ -410,7 +410,7 @@ const Social = () => {
   const formatActivityMessage = (activity: ActivityItem): string => {
     switch (activity.type) {
       case 'run':
-        const distance = activity.data.distanceKm.toFixed(1);
+        const distance = parseFloat(activity.data.distanceKm).toFixed(1);
         const territories = activity.data.territoriesConquered;
         if (territories > 0) {
           return `🏃 ran ${distance} km and conquered ${territories} area${territories > 1 ? 's' : ''}`;

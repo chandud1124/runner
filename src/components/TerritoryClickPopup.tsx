@@ -130,7 +130,7 @@ const TerritoryClickPopup = ({ territory, onClose, currentUserId }: TerritoryCli
                     <div>
                       <div className="text-white/60 text-xs">Distance</div>
                       <div className="text-white font-bold text-lg">
-                        {territory.distance_km.toFixed(2)} km
+                        {parseFloat(territory.distance_km).toFixed(2)} km
                       </div>
                     </div>
                     <div>

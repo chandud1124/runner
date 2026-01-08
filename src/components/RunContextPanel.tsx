@@ -236,7 +236,7 @@ const RunContextPanel = ({ currentPosition, isRunning, isPaused = false, current
                                 <div>
                                   <div className="text-white/60">Distance</div>
                                   <div className="text-white font-bold">
-                                    {context.personalBest.distanceKm.toFixed(2)} km
+                                    {parseFloat(context.personalBest.distanceKm).toFixed(2)} km
                                   </div>
                                 </div>
                                 <div>

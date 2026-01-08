@@ -189,7 +189,7 @@ const Stats = () => {
                     <div className="space-y-3">
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-bold text-white">
-                          {statsData.bestRun.distanceKm.toFixed(2)}
+                          {parseFloat(statsData.bestRun.distanceKm).toFixed(2)}
                         </span>
                         <span className="text-white/60 text-lg">km</span>
                       </div>
@@ -314,7 +314,7 @@ const Stats = () => {
                               </div>
                               <div className="flex items-center gap-4 text-white">
                                 <div className="flex items-center gap-1">
-                                  <span className="font-bold">{run.distanceKm.toFixed(2)} km</span>
+                                  <span className="font-bold">{parseFloat(run.distanceKm).toFixed(2)} km</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-white/60">
                                   <Clock className="w-4 h-4" />
