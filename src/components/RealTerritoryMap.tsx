@@ -562,8 +562,35 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
       const response = await apiFetch(`/territories/${runId}/info`);
       setSelectedTerritory(response.territory);
       setShowTerritoryPopup(true);
+      return;
     } catch (error) {
       console.error('Failed to load territory info:', error);
+    }
+
+    // Fallback: try to build a minimal view from loaded data so the user still sees something
+    const fromTerritories = territories.find(t => t.run_id === runId)
+      || individualTerritories.find(t => t.run_id === runId)
+      || teamTerritories.flatMap(t => t.territories).find(t => t.run_id === runId);
+
+    const fromRun = runs.find(r => r.id === runId);
+
+    if (fromTerritories || fromRun) {
+      const base = fromTerritories || {} as any;
+      const ownerName = (base as any).owner_name || 'Unknown';
+      const distanceKm = base.distance_km ?? fromRun?.distance_km;
+      const createdAt = (base as any).created_at || fromRun?.created_at || new Date().toISOString();
+
+      setSelectedTerritory({
+        tile_id: (base as any).tile_id || `run-${runId}`,
+        owner_id: base.owner_id || fromRun?.user_id || 0,
+        owner_name: ownerName,
+        strength: (base as any).strength || 1,
+        last_claimed: createdAt,
+        distance_km: distanceKm,
+        duration_sec: fromRun?.duration_sec || null,
+        history: [],
+      });
+      setShowTerritoryPopup(true);
     }
   };
 

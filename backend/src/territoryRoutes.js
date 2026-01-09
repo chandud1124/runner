@@ -147,12 +147,36 @@ router.get('/:runId/info', async (req, res) => {
     `;
     
     const { rows: territoryRows } = await pool.query(territoryQuery, [runId]);
-    
-    if (territoryRows.length === 0) {
-      return res.status(404).json({ ok: false, error: 'Territory not found' });
-    }
 
-    const territory = territoryRows[0];
+    let territory = territoryRows[0];
+
+    // Fallback: if no territory exists for this run, try to build minimal info from the run row
+    if (!territory) {
+      const { rows: runRows } = await pool.query(
+        'SELECT id, user_id, geojson, distance_km, duration_sec, created_at, activity_type FROM runs WHERE id = $1',
+        [runId]
+      );
+
+      if (runRows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Territory not found' });
+      }
+
+      const run = runRows[0];
+      territory = {
+        id: run.id,
+        run_id: run.id,
+        owner_id: run.user_id,
+        geojson: run.geojson,
+        created_at: run.created_at,
+        distance_km: run.distance_km,
+        activity_type: run.activity_type,
+        owner_name: null,
+        avatar_url: null,
+        run_distance: run.distance_km,
+        run_duration: run.duration_sec,
+        run_date: run.created_at,
+      };
+    }
     
     // Get overlapping territories (recent runs from all users)
     const overlappingQuery = `
