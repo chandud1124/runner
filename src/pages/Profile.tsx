@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Camera, Edit2, Save, X, LogOut, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,13 @@ import { api } from '@/lib/api';
 import BottomNavigation from '@/components/BottomNavigation';
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout, refresh } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user?.username || '');
   const [activityStats, setActivityStats] = useState<{ run: number; cycle: number } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleSave = () => {
     if (username.trim()) {
@@ -31,6 +32,33 @@ const Profile = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+      toast({
+        title: 'Profile refreshed',
+        description: 'Your stats have been updated.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Refresh failed',
+        description: 'Could not update your stats.',
+        variant: 'destructive',
+      });
+    }
+    setIsRefreshing(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    toast({
+      title: 'Logged out',
+      description: 'You have been logged out successfully.',
+    });
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -40,7 +68,10 @@ const Profile = () => {
       .slice(0, 2);
   };
 
-  // Fetch activity-specific stats
+  // Update username when user changes
+  useEffect(() => {
+    setUsername(user?.username || '');
+  }, [user?.username]);
   useEffect(() => {
     const fetchActivityStats = async () => {
       try {
@@ -69,13 +100,23 @@ const Profile = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="font-display font-semibold text-foreground">Profile</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => (isEditing ? setIsEditing(false) : setIsEditing(true))}
-          >
-            {isEditing ? <X className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => (isEditing ? setIsEditing(false) : setIsEditing(true))}
+            >
+              {isEditing ? <X className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -149,13 +190,13 @@ const Profile = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-muted/30 rounded-xl p-4 text-center">
               <p className="text-3xl font-display font-bold text-gradient-territory">
-                {user?.stats?.territories_owned || 0}
+                {user?.stats?.territories_owned ?? 0}
               </p>
               <p className="text-sm text-muted-foreground">Territories Captured</p>
             </div>
             <div className="bg-muted/30 rounded-xl p-4 text-center">
               <p className="text-3xl font-display font-bold text-gradient-cyber">
-                {user?.stats?.total_distance_km ? parseFloat(String(user.stats.total_distance_km)).toFixed(1) : '0'}
+                {user?.stats?.total_distance_km ? parseFloat(String(user.stats.total_distance_km)).toFixed(1) : '0.0'}
               </p>
               <p className="text-sm text-muted-foreground">km Total Distance</p>
             </div>
@@ -235,6 +276,26 @@ const Profile = () => {
                 onClick={() => navigate('/privacy-zones')}
               >
                 Manage Privacy Zones
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Logout Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card>
+            <CardContent className="pt-6">
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
               </Button>
             </CardContent>
           </Card>

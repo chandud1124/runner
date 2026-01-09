@@ -131,8 +131,8 @@ const Stats = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-white animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -140,12 +140,12 @@ const Stats = () => {
   const hasNoRuns = !statsData || statsData.totals.totalRuns === 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0 z-10">
+      <div className="bg-card/95 backdrop-blur-xl border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-white">Your Stats</h1>
-          <p className="text-white/60 text-sm">{user?.username || 'Runner'}</p>
+          <h1 className="text-2xl font-bold text-foreground">Your Stats</h1>
+          <p className="text-muted-foreground text-sm">{user?.username || 'Runner'}</p>
         </div>
       </div>
 
@@ -156,12 +156,12 @@ const Stats = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-20"
           >
-            <Activity className="w-16 h-16 text-white/40 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">No runs yet</h2>
-            <p className="text-white/60 mb-6">Start your first run to see your stats!</p>
+            <Activity className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">No runs yet</h2>
+            <p className="text-muted-foreground mb-6">Start your first run to see your stats!</p>
             <Button
               onClick={() => navigate('/run')}
-              className="bg-green-500 hover:bg-green-600 text-white px-8 py-6 text-lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg"
             >
               Start Your First Run 🏃‍♂️
             </Button>
@@ -175,25 +175,25 @@ const Stats = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Card className="bg-gradient-to-br from-orange-500/20 to-yellow-500/20 border-orange-500/30">
+                <Card className="bg-gradient-to-br from-orange-500/15 to-amber-500/10 border-border">
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <Trophy className="w-5 h-5 text-orange-400" />
-                      <CardTitle className="text-white">Best Run</CardTitle>
+                      <CardTitle className="text-foreground">Best Run</CardTitle>
                     </div>
-                    <CardDescription className="text-white/60">
+                    <CardDescription className="text-muted-foreground">
                       Your longest distance
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-white">
+                        <span className="text-4xl font-bold text-foreground">
                           {parseFloat(statsData.bestRun.distanceKm).toFixed(2)}
                         </span>
-                        <span className="text-white/60 text-lg">km</span>
+                        <span className="text-muted-foreground text-lg">km</span>
                       </div>
-                      <div className="flex items-center gap-4 text-white/80">
+                      <div className="flex items-center gap-4 text-foreground/80">
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
                           <span>{formatTime(statsData.bestRun.durationSec)}</span>
@@ -203,7 +203,7 @@ const Stats = () => {
                           <span>{formatPace(statsData.bestRun.paceMinKm)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-white/60 text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground text-sm">
                         <Calendar className="w-4 h-4" />
                         <span>{formatDate(statsData.bestRun.createdAt)}</span>
                       </div>
@@ -219,46 +219,46 @@ const Stats = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+              <Card className="bg-card/50 backdrop-blur-xl border-border">
                 <CardHeader>
-                  <CardTitle className="text-white">All-Time Stats</CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardTitle className="text-foreground">All-Time Stats</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     Your total achievements
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-                      <div className="text-blue-400 text-sm mb-1">Distance</div>
-                      <div className="text-2xl font-bold text-white">
+                    <div className="bg-muted/60 rounded-lg p-4 border border-border">
+                      <div className="text-primary text-sm mb-1">Distance</div>
+                      <div className="text-2xl font-bold text-foreground">
                         {statsData?.totals.totalDistanceKm.toFixed(1)} km
                       </div>
                     </div>
-                    <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
+                    <div className="bg-muted/60 rounded-lg p-4 border border-border">
                       <div className="text-purple-400 text-sm mb-1">Time</div>
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold text-foreground">
                         {formatTotalTime(statsData?.totals.totalTimeSec || 0)}
                       </div>
                     </div>
-                    <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+                    <div className="bg-muted/60 rounded-lg p-4 border border-border">
                       <div className="text-green-400 text-sm mb-1">Runs</div>
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold text-foreground">
                         {statsData?.totals.totalRuns}
                       </div>
                     </div>
-                    <div className="bg-orange-500/10 rounded-lg p-4 border border-orange-500/20">
+                    <div className="bg-muted/60 rounded-lg p-4 border border-border">
                       <div className="text-orange-400 text-sm mb-1">Active Days</div>
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold text-foreground">
                         {statsData?.totals.activeDays}
                       </div>
                     </div>
                   </div>
                   {statsData?.totals.avgPaceMinKm > 0 && (
-                    <div className="mt-4 bg-cyan-500/10 rounded-lg p-4 border border-cyan-500/20">
+                    <div className="mt-4 bg-muted/60 rounded-lg p-4 border border-border">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-cyan-400 text-sm mb-1">Average Pace</div>
-                          <div className="text-xl font-bold text-white">
+                          <div className="text-xl font-bold text-foreground">
                             {formatPace(statsData.totals.avgPaceMinKm)}
                           </div>
                         </div>
@@ -276,16 +276,16 @@ const Stats = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+              <Card className="bg-card/50 backdrop-blur-xl border-border">
                 <CardHeader>
-                  <CardTitle className="text-white">Run History</CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardTitle className="text-foreground">Run History</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     All your runs, most recent first
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {runHistory.length === 0 ? (
-                    <div className="text-center py-8 text-white/60">
+                    <div className="text-center py-8 text-muted-foreground">
                       No runs found
                     </div>
                   ) : (
@@ -296,13 +296,13 @@ const Stats = () => {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          className="bg-white/5 hover:bg-white/10 transition-colors rounded-lg p-4 cursor-pointer group"
+                          className="bg-card/50 hover:bg-card transition-colors rounded-lg p-4 cursor-pointer group border border-border"
                           onClick={() => navigate(`/run/${run.id}`)}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <span className="text-white/60 text-sm">
+                                <span className="text-muted-foreground text-sm">
                                   {formatDate(run.createdAt)}
                                 </span>
                                 {run.territoriesClaimed > 0 && (
@@ -312,43 +312,43 @@ const Stats = () => {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-4 text-white">
+                              <div className="flex items-center gap-4 text-foreground">
                                 <div className="flex items-center gap-1">
                                   <span className="font-bold">{parseFloat(run.distanceKm).toFixed(2)} km</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-white/60">
+                                <div className="flex items-center gap-1 text-muted-foreground">
                                   <Clock className="w-4 h-4" />
                                   <span className="text-sm">{formatTime(run.durationSec)}</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-white/60">
+                                <div className="flex items-center gap-1 text-muted-foreground">
                                   <Activity className="w-4 h-4" />
                                   <span className="text-sm">{formatPace(run.paceMinKm)}</span>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/run/${run.id}/visualize`);
-                                }}
-                                className="p-2 rounded-lg bg-white/5 hover:bg-purple-500/20 text-white/40 hover:text-purple-400 transition-all"
-                                title="Visualize Territory"
-                              >
-                                <MapPin className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExportRun(run);
-                                }}
-                                className="p-2 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-white/40 hover:text-cyan-400 transition-all"
-                                title="Share / Export"
-                              >
-                                <Share2 className="w-4 h-4" />
-                              </button>
-                              <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-white/80 transition-colors" />
-                            </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/run/${run.id}/visualize`);
+                                  }}
+                                  className="p-2 rounded-lg bg-muted/60 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all border border-border"
+                                  title="Visualize Territory"
+                                >
+                                  <MapPin className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExportRun(run);
+                                  }}
+                                  className="p-2 rounded-lg bg-muted/60 hover:bg-cyan-500/10 text-muted-foreground hover:text-cyan-400 transition-all border border-border"
+                                  title="Share / Export"
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                </button>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                              </div>
                           </div>
                         </motion.div>
                       ))}
@@ -358,7 +358,7 @@ const Stats = () => {
                           onClick={loadMore}
                           disabled={historyLoading}
                           variant="outline"
-                          className="w-full mt-4 bg-white/5 border-white/10 text-white hover:bg-white/10"
+                          className="w-full mt-4 bg-card/50 border-border text-foreground hover:bg-card"
                         >
                           {historyLoading ? (
                             <>

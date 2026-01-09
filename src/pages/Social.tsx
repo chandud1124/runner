@@ -454,14 +454,14 @@ const Social = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0 z-10">
+      <div className="bg-card/95 backdrop-blur-xl border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Social</h1>
-              <p className="text-white/60 text-sm">Connect with runners & compete</p>
+              <h1 className="text-2xl font-bold text-foreground">Social</h1>
+              <p className="text-muted-foreground text-sm">Connect with runners & compete</p>
             </div>
             <NotificationCenter />
           </div>
@@ -479,19 +479,19 @@ const Social = () => {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-cyan-400" />
-                  <CardTitle className="text-white">This Week</CardTitle>
+                  <CardTitle className="text-foreground">This Week</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-2xl font-bold text-foreground">
                       {weeklyComparison.userWeeklyDistance.toFixed(1)} km
                     </div>
                     <div className="text-cyan-400 text-sm">You</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-2xl font-bold text-foreground">
                       {weeklyComparison.friendsAvgDistance.toFixed(1)} km
                     </div>
                     <div className="text-orange-400 text-sm">Friends Avg</div>
@@ -515,14 +515,14 @@ const Social = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+          <Card className="bg-card/50 backdrop-blur-xl border-border">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-white/60" />
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <div className="text-white font-medium">Show Friends on Map</div>
-                    <div className="text-white/60 text-sm">View friends' territories</div>
+                    <div className="text-foreground font-medium">Show Friends on Map</div>
+                    <div className="text-muted-foreground text-sm">View friends' territories</div>
                   </div>
                 </div>
                 <Switch
@@ -535,38 +535,38 @@ const Social = () => {
         </motion.div>
 
         <Tabs defaultValue="social" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/10">
-            <TabsTrigger value="social" className="text-white data-[state=active]:bg-white/20">
+          <TabsList className="grid w-full grid-cols-3 bg-muted">
+            <TabsTrigger value="social" className="text-foreground data-[state=active]:bg-background">
               Social
             </TabsTrigger>
-            <TabsTrigger value="friends" className="text-white data-[state=active]:bg-white/20">
+            <TabsTrigger value="friends" className="text-foreground data-[state=active]:bg-background">
               Friends
             </TabsTrigger>
-            <TabsTrigger value="teams" className="text-white data-[state=active]:bg-white/20">
+            <TabsTrigger value="teams" className="text-foreground data-[state=active]:bg-background">
               Teams
             </TabsTrigger>
           </TabsList>
 
           {/* Global Leaderboard */}
           <TabsContent value="social" className="space-y-4">
-            <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+            <Card className="bg-card/50 backdrop-blur-xl border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className="text-foreground flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-yellow-400" />
                     Global Leaderboard
                   </CardTitle>
                   <Badge className="bg-yellow-500/20 text-yellow-400">Top Runners</Badge>
                 </div>
-                <CardDescription className="text-white/60">
+                <CardDescription className="text-muted-foreground">
                   Highest distance runners worldwide
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {globalLeaderboard.length === 0 ? (
                   <div className="text-center py-8">
-                    <Trophy className="w-12 h-12 text-white/40 mx-auto mb-3" />
-                    <p className="text-white/60">No runners yet</p>
+                    <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No runners yet</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -576,13 +576,13 @@ const Social = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                       >
                         <div className="flex-shrink-0 w-8 text-center">
                           {index === 0 && <span className="text-2xl">🥇</span>}
                           {index === 1 && <span className="text-2xl">🥈</span>}
                           {index === 2 && <span className="text-2xl">🥉</span>}
-                          {index > 2 && <span className="text-white/60 font-bold">#{index + 1}</span>}
+                          {index > 2 && <span className="text-muted-foreground font-bold">#{index + 1}</span>}
                         </div>
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold">
@@ -642,10 +642,10 @@ const Social = () => {
               </Dialog>
             </div>
 
-            <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+            <Card className="bg-card/50 backdrop-blur-xl border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className="text-foreground flex items-center gap-2">
                     <Users className="w-5 h-5 text-green-400" />
                     Friends Leaderboard
                   </CardTitle>
@@ -703,11 +703,11 @@ const Social = () => {
           <TabsContent value="teams" className="space-y-4">
             {/* Create Team and Join by Code Buttons */}
             <div className="flex justify-between items-center gap-2">
-              <h3 className="text-white text-lg font-semibold">Teams ({myTeams.length})</h3>
+              <h3 className="text-foreground text-lg font-semibold">Teams ({myTeams.length})</h3>
               <div className="flex gap-2">
                 <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                    <Button variant="outline" className="border-border text-foreground hover:bg-accent">
                       <Mail className="w-4 h-4 mr-2" />
                       Join by Code
                     </Button>
@@ -780,19 +780,19 @@ const Social = () => {
 
             {/* Teams List */}
             {myTeams.length === 0 ? (
-              <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+              <Card className="bg-card/50 backdrop-blur-xl border-border">
                 <CardContent className="pt-6">
                   <div className="text-center py-8">
-                    <Shield className="w-12 h-12 text-white/40 mx-auto mb-3" />
-                    <p className="text-white/60">No teams yet</p>
-                    <p className="text-white/40 text-sm">Create a team or join with an invitation code!</p>
+                    <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No teams yet</p>
+                    <p className="text-muted-foreground/70 text-sm">Create a team or join with an invitation code!</p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
                 {myTeams.map((team) => (
-                  <Card key={team.id} className="bg-white/5 backdrop-blur-xl border-white/10">
+                  <Card key={team.id} className="bg-card/50 backdrop-blur-xl border-border">
                     <CardContent className="pt-4">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -802,9 +802,9 @@ const Social = () => {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <div className="text-white font-medium">{team.name}</div>
+                                <div className="text-foreground font-medium">{team.name}</div>
                                 {team.visibility === 'private' && (
-                                  <Badge variant="secondary" className="bg-white/10 text-white/70 text-xs">
+                                  <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
                                     <EyeOff className="w-3 h-3 mr-1" />
                                     Private
                                   </Badge>
@@ -825,7 +825,7 @@ const Social = () => {
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="border-white/20 text-white hover:bg-white/10"
+                              className="border-border text-foreground hover:bg-accent"
                               onClick={() => navigate(`/team/${team.id}`)}
                             >
                               <Shield className="w-4 h-4 mr-1" />
@@ -836,7 +836,7 @@ const Social = () => {
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="border-white/20 text-white hover:bg-white/10"
+                              className="border-border text-foreground hover:bg-accent"
                               onClick={() => handleViewMembers(team)}
                             >
                               <Users className="w-4 h-4 mr-1" />
@@ -865,7 +865,7 @@ const Social = () => {
                                 </DialogHeader>
                                 <div className="space-y-4 mt-4">
                                   {/* Visibility Toggle */}
-                                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                     <div className="flex items-center gap-3">
                                       {team.visibility === 'public' ? (
                                         <Eye className="w-5 h-5 text-green-400" />
@@ -952,7 +952,7 @@ const Social = () => {
           </DialogHeader>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {teamMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
                     <span className="text-white font-bold">
@@ -960,8 +960,8 @@ const Social = () => {
                     </span>
                   </div>
                   <div>
-                    <div className="text-white font-medium">{member.username}</div>
-                    <div className="text-white/60 text-sm">{member.email}</div>
+                    <div className="text-foreground font-medium">{member.username}</div>
+                    <div className="text-muted-foreground text-sm">{member.email}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

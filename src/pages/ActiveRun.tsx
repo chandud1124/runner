@@ -772,7 +772,7 @@ const ActiveRun = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-white border-white/30 hover:bg-white/20 hover:border-white"
+                className="text-foreground border-border bg-card/80 hover:bg-card hover:border-border"
                 onClick={() => navigate('/')}
               >
                 Cancel

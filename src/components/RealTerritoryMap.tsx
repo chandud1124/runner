@@ -732,6 +732,9 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
                     fillColor: isOwn ? '#22c55e' : color,
                     fillOpacity: 0.35,
                   }}
+                  eventHandlers={{
+                    click: () => handleTerritoryClick(run.id),
+                  }}
                 />
               );
             }

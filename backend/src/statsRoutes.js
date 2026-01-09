@@ -131,10 +131,9 @@ router.get('/history', requireAuth, async (req, res) => {
           ELSE 0 
         END AS pace_min_km,
         (
-          SELECT COUNT(DISTINCT th.tile_id)::int
-          FROM territory_history th
-          WHERE th.to_owner = r.user_id 
-            AND th.changed_at BETWEEN r.created_at - INTERVAL '5 minutes' AND r.created_at + INTERVAL '5 minutes'
+          SELECT COUNT(*)::int
+          FROM territories t
+          WHERE t.run_id = r.id AND t.owner_id = r.user_id
         ) AS territories_claimed
       FROM runs r
       WHERE r.user_id = $1
@@ -192,16 +191,13 @@ router.get('/run/:id', requireAuth, async (req, res) => {
         END AS pace_min_km,
         (
           SELECT json_agg(json_build_object(
-            'tileId', th.tile_id,
-            'fromOwner', th.from_owner,
-            'toOwner', th.to_owner,
-            'changedAt', th.changed_at,
+            'runId', t.run_id,
+            'ownerId', t.owner_id,
+            'createdAt', t.created_at,
             'geometry', t.geojson
           ))
-          FROM territory_history th
-          JOIN territories t ON th.tile_id = t.tile_id
-          WHERE th.to_owner = r.user_id 
-            AND th.changed_at BETWEEN r.created_at - INTERVAL '5 minutes' AND r.created_at + INTERVAL '5 minutes'
+          FROM territories t
+          WHERE t.run_id = r.id AND t.owner_id = r.user_id
         ) AS territories
       FROM runs r
       WHERE r.id = $1 AND r.user_id = $2`,

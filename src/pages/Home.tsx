@@ -36,7 +36,7 @@ const Home = () => {
         
         {/* Floating Map Sub-Menu (Top Center) */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 z-[900] flex gap-1 bg-black/70 backdrop-blur-xl rounded-full px-2 py-1.5 border border-white/10"
+          className="absolute left-1/2 -translate-x-1/2 z-[900] flex gap-1 bg-card/95 backdrop-blur-xl rounded-full px-2 py-1.5 border border-border"
           style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}
         >
           {filterOptions.map((filter) => (
