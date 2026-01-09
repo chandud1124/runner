@@ -210,6 +210,13 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
   const [mineHistoryTerritories, setMineHistoryTerritories] = useState<Territory[] | null>(null);
   const [showRunPaths, setShowRunPaths] = useState(true); // Show organic run paths instead of grid tiles
 
+  // In Present mode always show conquest (processed territories), not raw run paths
+  useEffect(() => {
+    if (filter === 'present' && showRunPaths) {
+      setShowRunPaths(false);
+    }
+  }, [filter, showRunPaths]);
+
   useEffect(() => {
     if (filter !== 'mine' && cyclingOnly) {
       setCyclingOnly(false);
