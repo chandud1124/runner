@@ -470,8 +470,8 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
               : null;
 
             if (newerPoly) {
-              // Subtract the newer territory from current
-              const diff = turf.difference(turf.featureCollection([turfPoly, newerPoly]));
+              // Subtract the newer territory from current (A - B set difference)
+              const diff = turf.difference(turfPoly, newerPoly);
               if (diff) {
                 turfPoly = diff as any;
               } else {
