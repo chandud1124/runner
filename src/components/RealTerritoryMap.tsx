@@ -434,8 +434,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
     
     switch (filter) {
       case 'mine':
-        // Phase 2: show territories the user has ever owned/claimed.
-        // Fallback: if historical list is not loaded, show currently owned.
+        // Show ALL user's runs (complete history), even if others claimed over them
         return (mineHistoryTerritories ?? territories).filter((t) => {
           const isMineHistoryKnown = mineHistoryTerritories !== null;
           if (!isMineHistoryKnown) {
@@ -451,16 +450,15 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
         );
       case 'present':
       default:
-        // Show recent territories (last 7 days) + user's own older territories
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        return territories.filter(t => {
-          const isRecent = t.created_at && new Date(t.created_at) > sevenDaysAgo;
-          const isOwnedByUser = user && t.owner_id === user.id;
-          const isOwnedByFriend = friendIds.has(t.owner_id) || teamMemberIds.has(t.owner_id);
-          
-          // Show if: recent OR (owned by user OR owned by friend)
-          return isRecent || isOwnedByUser || isOwnedByFriend;
+        // Show CURRENT ownership - most recent claim for each area
+        // Sort by created_at ascending (oldest first) so NEWER territories render ON TOP
+        const sorted = [...territories].sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateA - dateB; // Oldest first, newer renders on top
         });
+        // Return all territories - render order creates "Lego block" effect
+        return sorted;
     }
   };
 
