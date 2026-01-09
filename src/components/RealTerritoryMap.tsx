@@ -451,8 +451,16 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
         );
       case 'present':
       default:
-        // Show all territories (current ownership map)
-        return territories;
+        // Show recent territories (last 7 days) + user's own older territories
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        return territories.filter(t => {
+          const isRecent = t.created_at && new Date(t.created_at) > sevenDaysAgo;
+          const isOwnedByUser = user && t.owner_id === user.id;
+          const isOwnedByFriend = friendIds.has(t.owner_id) || teamMemberIds.has(t.owner_id);
+          
+          // Show if: recent OR (owned by user OR owned by friend)
+          return isRecent || isOwnedByUser || isOwnedByFriend;
+        });
     }
   };
 
