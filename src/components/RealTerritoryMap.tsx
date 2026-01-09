@@ -558,21 +558,32 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
 
   // Handle territory click - fetch and show info
   const handleTerritoryClick = async (runId: number) => {
+    console.log(`[TerritoryClick] Handling click for runId=${runId}`);
+    
     try {
+      console.log(`[TerritoryClick] Fetching from API: /territories/${runId}/info`);
       const response = await apiFetch(`/territories/${runId}/info`);
+      console.log(`[TerritoryClick] API Success:`, response.territory);
       setSelectedTerritory(response.territory);
       setShowTerritoryPopup(true);
       return;
     } catch (error) {
-      console.error('Failed to load territory info:', error);
+      console.error(`[TerritoryClick] API Error (${error}), attempting fallback...`, error);
     }
 
     // Fallback: try to build a minimal view from loaded data so the user still sees something
+    console.log(`[TerritoryClick] Using fallback logic...`);
+    console.log(`[TerritoryClick] Searching in territories (count=${territories.length}):`, territories.filter(t => t.run_id === runId));
+    console.log(`[TerritoryClick] Searching in individualTerritories (count=${individualTerritories.length}):`, individualTerritories.filter(t => t.run_id === runId));
+    console.log(`[TerritoryClick] Searching in runs (count=${runs.length}):`, runs.find(r => r.id === runId));
+    
     const fromTerritories = territories.find(t => t.run_id === runId)
       || individualTerritories.find(t => t.run_id === runId)
       || teamTerritories.flatMap(t => t.territories).find(t => t.run_id === runId);
 
     const fromRun = runs.find(r => r.id === runId);
+
+    console.log(`[TerritoryClick] Fallback data: fromTerritories=`, fromTerritories, `fromRun=`, fromRun);
 
     if (fromTerritories || fromRun) {
       const base = fromTerritories || {} as any;
@@ -580,17 +591,26 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
       const distanceKm = base.distance_km ?? fromRun?.distance_km;
       const createdAt = (base as any).created_at || fromRun?.created_at || new Date().toISOString();
 
-      setSelectedTerritory({
+      const territoryData = {
         tile_id: (base as any).tile_id || `run-${runId}`,
+        run_id: runId,
         owner_id: base.owner_id || fromRun?.user_id || 0,
         owner_name: ownerName,
+        avatar_url: (base as any).avatar_url || null,
         strength: (base as any).strength || 1,
         last_claimed: createdAt,
         distance_km: distanceKm,
         duration_sec: fromRun?.duration_sec || null,
+        activity_type: (base as any).activity_type || fromRun?.activity_type || 'run',
         history: [],
-      });
+      };
+      
+      console.log(`[TerritoryClick] Using fallback territory:`, territoryData);
+      setSelectedTerritory(territoryData as any);
       setShowTerritoryPopup(true);
+    } else {
+      console.warn(`[TerritoryClick] No data found for runId=${runId} in any source`);
+      alert(`Territory data not found. RunId: ${runId}`);
     }
   };
 

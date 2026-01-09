@@ -59,6 +59,16 @@ function isRedisAvailable() {
 app.use(cors());
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+  });
+  next();
+});
+
 // Serve static assets (including favicon) from project public folder
 app.use(express.static(publicDir));
 
@@ -118,19 +128,27 @@ function getLocalIP() {
 
 async function start() {
   try {
+    console.log('[Server] Attempting database connection...');
     await verifyDatabaseConnection();
+    console.log('[Server] Database connection verified');
+    
+    console.log('[Server] Ensuring schema...');
     await ensureSchema();
-    console.log('Connected to database');
+    console.log('[Server] Schema ready');
 
     // Note: Redis connection is lazy - will connect when first used
     // This prevents startup delays and allows the server to run without Redis
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`API ready on http://0.0.0.0:${PORT}`);
-      console.log(`Accessible at http://localhost:${PORT} (local) and http://${getLocalIP()}:${PORT} (network)`);
+      console.log(`[Server] API ready on http://0.0.0.0:${PORT}`);
+      console.log(`[Server] Accessible at http://localhost:${PORT} (local) and http://${getLocalIP()}:${PORT} (network)`);
+      console.log(`[Server] NODE_ENV=${process.env.NODE_ENV}`);
+      console.log(`[Server] Database=${process.env.DATABASE_URL ? 'configured' : 'NOT configured'}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('[Server] Failed to start server:', error.message);
+    console.error('[Server] Stack:', error.stack);
+    console.error('[Server] DATABASE_URL is set?:', !!process.env.DATABASE_URL);
     process.exit(1);
   }
 }
