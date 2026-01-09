@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Polygon, Polyline, useMap, Circle, Marker } from 'react-leaflet';
 import { LatLngExpression, Icon, DivIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -7,6 +7,7 @@ import { Crosshair, Plus, Minus, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { db } from '@/lib/db';
+import * as turf from '@turf/turf';
 
 type Territory = {
   id: number;
@@ -428,6 +429,82 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
     };
   };
 
+  // Process territories for Present mode: subtract overlapping newer territories
+  // This implements true territorial conquest - latest run wins, no overlap
+  const getProcessedPresentTerritories = useMemo(() => {
+    if (filter !== 'present') return territories;
+    
+    // Sort by timestamp: oldest first
+    const sorted = [...territories].sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateA - dateB;
+    });
+
+    // For each territory, subtract all newer overlapping territories
+    const processed: Territory[] = [];
+    
+    for (let i = 0; i < sorted.length; i++) {
+      const territory = sorted[i];
+      let currentGeom = territory.geojson;
+
+      // Skip if invalid geometry
+      if (!currentGeom?.geometry?.coordinates) continue;
+
+      try {
+        // Convert to Turf polygon
+        let turfPoly = currentGeom.geometry.type === 'Polygon' 
+          ? turf.polygon(currentGeom.geometry.coordinates as number[][][])
+          : null;
+
+        if (!turfPoly) continue;
+
+        // Subtract all newer territories that overlap
+        for (let j = i + 1; j < sorted.length; j++) {
+          const newerTerritory = sorted[j];
+          if (!newerTerritory.geojson?.geometry?.coordinates) continue;
+
+          try {
+            const newerPoly = newerTerritory.geojson.geometry.type === 'Polygon'
+              ? turf.polygon(newerTerritory.geojson.geometry.coordinates as number[][][])
+              : null;
+
+            if (newerPoly) {
+              // Subtract the newer territory from current
+              const diff = turf.difference(turf.featureCollection([turfPoly, newerPoly]));
+              if (diff) {
+                turfPoly = diff as any;
+              } else {
+                // Completely covered - this territory is gone
+                turfPoly = null;
+                break;
+              }
+            }
+          } catch (e) {
+            // Ignore geometry errors
+            continue;
+          }
+        }
+
+        // If territory still exists after subtractions, add it
+        if (turfPoly && turfPoly.geometry) {
+          processed.push({
+            ...territory,
+            geojson: {
+              ...territory.geojson,
+              geometry: turfPoly.geometry as any
+            }
+          });
+        }
+      } catch (e) {
+        // On error, keep original geometry
+        processed.push(territory);
+      }
+    }
+
+    return processed;
+  }, [territories, filter]);
+
   // Filter territories based on active filter
   const getFilteredTerritories = () => {
     if (!user) return territories;
@@ -450,15 +527,8 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
         );
       case 'present':
       default:
-        // Show CURRENT ownership - most recent claim for each area
-        // Sort by created_at ascending (oldest first) so NEWER territories render ON TOP
-        const sorted = [...territories].sort((a, b) => {
-          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return dateA - dateB; // Oldest first, newer renders on top
-        });
-        // Return all territories - render order creates "Lego block" effect
-        return sorted;
+        // Return processed territories with overlaps removed
+        return getProcessedPresentTerritories;
     }
   };
 
