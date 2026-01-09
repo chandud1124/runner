@@ -2,7 +2,6 @@ import express from 'express';
 import { lineString, length as turfLength, buffer as turfBuffer } from '@turf/turf';
 import { pool } from './db.js';
 import { requireAuth } from './middleware/auth.js';
-import { tileIdFromCoord, polygonFromTile, tileAreaKm2 } from './grid.js';
 import { validateRunSubmission } from './antiCheat.js';
 import { getRedisClient, isRedisAvailable } from './server.js';
 
@@ -115,27 +114,24 @@ router.post('/', requireAuth, async (req, res) => {
     
     console.log(`[RUN] Validation passed - Max speed: ${(validation.stats.maxSpeed * 3.6).toFixed(1)} km/h, Avg accuracy: ${validation.stats.avgAccuracy?.toFixed(1)}m`);
 
-
+    // Create buffered path from GPS points
     const line = lineString(points.map((p) => [p.lng, p.lat]));
     const computedDistance = distanceKm ?? turfLength(line, { units: 'kilometers' });
-    const buffered = turfBuffer(line, BUFFER_KM, { units: 'kilometers' });
+    const bufferedTerritory = turfBuffer(line, BUFFER_KM, { units: 'kilometers' });
 
-    // Determine tiles touched using accurate geometry-based detection
-    const { getTilesFromGeometry } = await import('./grid.js');
-    const touchedTiles = buffered?.geometry ? getTilesFromGeometry(buffered.geometry) : [];
-    const tileIds = new Set(touchedTiles.length > 0 ? touchedTiles : points.map((p) => tileIdFromCoord(p.lat, p.lng)));
-    console.log(`[RUN] Tiles touched (geometry-based): ${tileIds.size} tiles - ${Array.from(tileIds).slice(0, 10).join(', ')}${tileIds.size > 10 ? '...' : ''}`);
+    console.log(`[RUN] Creating organic territory from path: ${computedDistance.toFixed(2)}km with ${points.length} GPS points`);
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
+      // Insert run with buffered path as geojson
       const runInsert = await client.query(
         `INSERT INTO runs (user_id, geojson, distance_km, duration_sec, activity_type, validation_status, raw_points, max_speed, avg_accuracy) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
         [
           req.userId, 
-          buffered, 
+          bufferedTerritory, 
           computedDistance, 
           durationSec ?? null,
           activityType,
@@ -147,72 +143,25 @@ router.post('/', requireAuth, async (req, res) => {
       );
       const runId = runInsert.rows[0].id;
 
-      // Persist tile touches for history views (even when a tile isn't captured)
-      const tileIdList = Array.from(tileIds);
-      if (tileIdList.length > 0) {
-        const distancePerTile = computedDistance / tileIdList.length;
-        await client.query(
-          `INSERT INTO territory_claims (tile_id, user_id, run_id, claimed_at, distance_in_tile, activity_type)
-           SELECT tile_id, $1, $3, NOW(), $4, $5
-           FROM UNNEST($2::text[]) AS tile_id`,
-          [req.userId, tileIdList, runId, distancePerTile, activityType]
-        );
-      }
+      // Create one organic territory from the entire run path
+      await client.query(
+        `INSERT INTO territories (run_id, owner_id, geojson, activity_type, distance_km, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [runId, req.userId, bufferedTerritory, activityType, computedDistance]
+      );
 
-      const updatedTiles = [];
-      for (const tileId of tileIds) {
-        const tilePoly = polygonFromTile(tileId);
-        const { rows } = await client.query('SELECT * FROM territories WHERE tile_id = $1', [tileId]);
-        if (rows.length === 0) {
-          await client.query(
-            'INSERT INTO territories (tile_id, owner_id, strength, geojson, last_claimed, activity_type, conquered_by_run_id) VALUES ($1, $2, $3, $4, NOW(), $5, $6)',
-            [tileId, req.userId, 1, tilePoly, activityType, runId]
-          );
-          await client.query(
-            'INSERT INTO territory_history (tile_id, from_owner, to_owner) VALUES ($1, NULL, $2)',
-            [tileId, req.userId]
-          );
-          updatedTiles.push({ tileId, ownerId: req.userId, strength: 1, flipped: true });
-        } else {
-          const t = rows[0];
-          if (t.owner_id === req.userId) {
-            const strength = t.strength + 1;
-            await client.query('UPDATE territories SET strength = $1, last_claimed = NOW(), activity_type = $2, conquered_by_run_id = $3 WHERE tile_id = $4', [strength, activityType, runId, tileId]);
-            updatedTiles.push({ tileId, ownerId: req.userId, strength, flipped: false });
-          } else {
-            const strength = t.strength - 1;
-            if (strength <= 0) {
-              await client.query(
-                'UPDATE territories SET owner_id = $1, strength = 1, last_claimed = NOW(), activity_type = $2, conquered_by_run_id = $3 WHERE tile_id = $4',
-                [req.userId, activityType, runId, tileId]
-              );
-              await client.query(
-                'INSERT INTO territory_history (tile_id, from_owner, to_owner) VALUES ($1, $2, $3)',
-                [tileId, t.owner_id, req.userId]
-              );
-              updatedTiles.push({ tileId, ownerId: req.userId, strength: 1, flipped: true });
-            } else {
-              await client.query('UPDATE territories SET strength = $1, last_claimed = NOW() WHERE tile_id = $2', [strength, tileId]);
-              updatedTiles.push({ tileId, ownerId: t.owner_id, strength, flipped: false });
-            }
-          }
-        }
-      }
+      console.log(`[RUN] Territory created: run_id=${runId}, owner=${req.userId}, distance=${computedDistance.toFixed(2)}km`);
 
       // Update user stats
       await client.query(
         `INSERT INTO user_stats (user_id, total_distance_km, territories_owned, area_km2)
-         VALUES ($1, $2, 0, 0)
-         ON CONFLICT (user_id) DO UPDATE SET total_distance_km = user_stats.total_distance_km + $2, updated_at = NOW()`,
+         VALUES ($1, $2, 1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET 
+           total_distance_km = user_stats.total_distance_km + $2,
+           territories_owned = user_stats.territories_owned + 1,
+           area_km2 = user_stats.area_km2 + $2,
+           updated_at = NOW()`,
         [req.userId, computedDistance]
-      );
-      // Refresh owned counts
-      const { rows: ownedRows } = await client.query('SELECT COUNT(*)::int AS c FROM territories WHERE owner_id = $1', [req.userId]);
-      const owned = ownedRows[0].c || 0;
-      const areaKm2 = owned * tileAreaKm2(Array.from(tileIds)[0]);
-      await client.query(
-        'UPDATE user_stats SET territories_owned = $1, area_km2 = $2, updated_at = NOW() WHERE user_id = $3',
-        [owned, areaKm2, req.userId]
       );
 
       // Update team stats if user is in a team
@@ -227,12 +176,12 @@ router.post('/', requireAuth, async (req, res) => {
         // Update team_member_stats
         await client.query(
           `INSERT INTO team_member_stats (team_id, user_id, distance_contributed_km, runs_contributed, territories_contributed)
-           VALUES ($1, $2, $3, 1, $4)
+           VALUES ($1, $2, $3, 1, 1)
            ON CONFLICT (team_id, user_id) DO UPDATE SET
              distance_contributed_km = team_member_stats.distance_contributed_km + $3,
              runs_contributed = team_member_stats.runs_contributed + 1,
-             territories_contributed = team_member_stats.territories_contributed + $4`,
-          [teamId, req.userId, computedDistance, updatedTiles.filter(t => t.flipped).length]
+             territories_contributed = team_member_stats.territories_contributed + 1`,
+          [teamId, req.userId, computedDistance]
         );
 
         // Log run completion to team feed
@@ -240,7 +189,7 @@ router.post('/', requireAuth, async (req, res) => {
         await addTeamActivity(client, teamId, req.userId, 'run_completed', {
           distance_km: computedDistance,
           duration_sec: durationSec,
-          tiles_captured: updatedTiles.filter(t => t.flipped).length
+          territory_created: true
         });
 
         // Update any active challenges
@@ -278,7 +227,7 @@ router.post('/', requireAuth, async (req, res) => {
       await redisDel('territories:all:*');
       await redisDel(`territories:${req.userId}:*`);
 
-      return res.json({ ok: true, runId, updatedTiles });
+      return res.json({ ok: true, runId, territoryCreated: true });
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Run ingest failed:', err);
@@ -295,7 +244,7 @@ router.post('/', requireAuth, async (req, res) => {
 // Batched sync endpoint for offline runs
 router.post('/sync', requireAuth, async (req, res) => {
   try {
-    const { runs = [] } = req.body || {}; // Array of { points, distanceKm, durationSec, activityType, updatedTiles }
+    const { runs = [] } = req.body || {};
     console.log(`[SYNC] User ${req.userId} syncing ${runs.length} runs`);
 
     if (!Array.isArray(runs) || runs.length === 0) {
@@ -310,31 +259,28 @@ router.post('/sync', requireAuth, async (req, res) => {
       for (let i = 0; i < runs.length; i++) {
         try {
           const runData = runs[i];
-          const { points, distanceKm, durationSec, activityType = 'run', updatedTiles = [] } = runData;
+          const { points, distanceKm, durationSec, activityType = 'run' } = runData;
 
           console.log(`[SYNC] Processing run ${i + 1}/${runs.length}: ${points?.length || 0} points`);
 
-          // Re-validate server-side (though client already validated)
+          // Re-validate server-side
           const validation = validateRunSubmission(points, activityType);
           if (!validation.valid) {
             console.log(`[SYNC] Validation failed for run ${i + 1}:`, validation.errors);
             continue; // Skip invalid runs
           }
 
+          // Create buffered path from GPS points
           const line = lineString(points.map((p) => [p.lng, p.lat]));
           const computedDistance = distanceKm ?? turfLength(line, { units: 'kilometers' });
-          const buffered = turfBuffer(line, BUFFER_KM, { units: 'kilometers' });
-
-          const { getTilesFromGeometry } = await import('./grid.js');
-          const touchedTiles = buffered?.geometry ? getTilesFromGeometry(buffered.geometry) : [];
-          const tileIds = new Set(touchedTiles.length > 0 ? touchedTiles : points.map((p) => tileIdFromCoord(p.lat, p.lng)));
+          const bufferedTerritory = turfBuffer(line, BUFFER_KM, { units: 'kilometers' });
 
           const runInsert = await client.query(
             `INSERT INTO runs (user_id, geojson, distance_km, duration_sec, activity_type, validation_status, raw_points, max_speed, avg_accuracy) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
             [
               req.userId, 
-              buffered, 
+              bufferedTerritory, 
               computedDistance, 
               durationSec ?? null,
               activityType,
@@ -347,78 +293,38 @@ router.post('/sync', requireAuth, async (req, res) => {
           const runId = runInsert.rows[0].id;
           console.log(`[SYNC] Inserted run ${runId} for user ${req.userId}`);
 
-        // Persist tile touches
-        const tileIdList = Array.from(tileIds);
-        if (tileIdList.length > 0) {
-          const distancePerTile = computedDistance / tileIdList.length;
+          // Create territory from the entire run path
           await client.query(
-            `INSERT INTO territory_claims (tile_id, user_id, run_id, claimed_at, distance_in_tile, activity_type)
-             SELECT tile_id, $1, $3, NOW(), $4, $5
-             FROM UNNEST($2::text[]) AS tile_id`,
-            [req.userId, tileIdList, runId, distancePerTile, activityType]
+            `INSERT INTO territories (run_id, owner_id, geojson, activity_type, distance_km, created_at)
+             VALUES ($1, $2, $3, $4, $5, NOW())`,
+            [runId, req.userId, bufferedTerritory, activityType, computedDistance]
           );
-        }
 
-        // Apply territory updates (use client's updatedTiles for efficiency, but verify)
-        for (const update of updatedTiles) {
-          const { tileId, ownerId, strength, flipped } = update;
-          if (ownerId !== req.userId.toString()) continue; // Only allow user's own updates
-
-          const tilePoly = polygonFromTile(tileId);
-          const { rows } = await client.query('SELECT * FROM territories WHERE tile_id = $1', [tileId]);
-          if (rows.length === 0) {
-            await client.query(
-              'INSERT INTO territories (tile_id, owner_id, strength, geojson, last_claimed, activity_type, conquered_by_run_id) VALUES ($1, $2, $3, $4, NOW(), $5, $6)',
-              [tileId, req.userId, strength, tilePoly, activityType, runId]
-            );
-            if (flipped) {
-              await client.query(
-                'INSERT INTO territory_history (tile_id, from_owner, to_owner) VALUES ($1, NULL, $2)',
-                [tileId, req.userId]
-              );
-            }
-          } else {
-            const t = rows[0];
-            // Conflict resolution: if already owned by someone else, skip
-            if (t.owner_id !== req.userId && !flipped) {
-              console.log(`Conflict: Tile ${tileId} owned by ${t.owner_id}, skipping update`);
-              continue;
-            }
-            if (t.owner_id === req.userId) {
-              await client.query('UPDATE territories SET strength = $1, last_claimed = NOW(), activity_type = $2, conquered_by_run_id = $3 WHERE tile_id = $4', [strength, activityType, runId, tileId]);
-            } else if (flipped) {
-              await client.query(
-                'UPDATE territories SET owner_id = $1, strength = $2, last_claimed = NOW(), activity_type = $3, conquered_by_run_id = $4 WHERE tile_id = $5',
-                [req.userId, strength, activityType, runId, tileId]
-              );
-              await client.query(
-                'INSERT INTO territory_history (tile_id, from_owner, to_owner) VALUES ($1, $2, $3)',
-                [tileId, t.owner_id, req.userId]
-              );
-            } else {
-              await client.query('UPDATE territories SET strength = $1, last_claimed = NOW() WHERE tile_id = $2', [strength, tileId]);
-            }
-          }
-        }
-
-        // Update user stats
           // Update user stats
           await client.query(
             `INSERT INTO user_stats (user_id, total_distance_km, territories_owned, area_km2)
-             VALUES ($1, $2, 0, 0)
-             ON CONFLICT (user_id) DO UPDATE SET total_distance_km = user_stats.total_distance_km + $2, updated_at = NOW()`,
+             VALUES ($1, $2, 1, $2)
+             ON CONFLICT (user_id) DO UPDATE SET 
+               total_distance_km = user_stats.total_distance_km + $2,
+               territories_owned = user_stats.territories_owned + 1,
+               area_km2 = user_stats.area_km2 + $2,
+               updated_at = NOW()`,
             [req.userId, computedDistance]
           );
 
-          syncedRuns.push({ runId, updatedTiles });
+          syncedRuns.push({ runId, territoryCreated: true });
         } catch (runErr) {
           console.error(`[SYNC] Error processing run ${i + 1}:`, runErr);
           // Continue with next run instead of failing entire sync
         }
       }
 
-      // Refresh owned counts after all runs
-      const { rows: ownedRows } = await client.query('SELECT COUNT(*)::int AS c FROM territories WHERE owner_id = $1', [req.userId]);
+      await client.query('COMMIT');
+      console.log(`[SYNC] Completed syncing ${syncedRuns.length} runs`);
+
+      // Invalidate caches
+      await redisDel('territories:all:*');
+      await redisDel(`territories:${req.userId}:*`);
       const owned = ownedRows[0].c || 0;
       // Approximate per-tile area for geohash precision 7 (~0.02 km^2)
       const areaPerTileKm2 = 0.02;

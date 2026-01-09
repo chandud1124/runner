@@ -2,7 +2,6 @@ import express from 'express';
 import { pool } from './db.js';
 import { requireAuth } from './middleware/auth.js';
 import { getRedisClient, isRedisAvailable } from './server.js';
-import { tileIdFromCoord } from './grid.js';
 
 const router = express.Router();
 
@@ -42,9 +41,24 @@ router.get('/', async (req, res) => {
       return res.json({ ok: true, territories: JSON.parse(cached), cached: true });
     }
 
-    const rows = ownerId
-      ? (await pool.query('SELECT * FROM territories WHERE owner_id = $1 ORDER BY last_claimed DESC LIMIT $2', [ownerId, limit])).rows
-      : (await pool.query('SELECT * FROM territories ORDER BY last_claimed DESC LIMIT $1', [limit])).rows;
+    // Get all territories with run and owner details
+    const query = `
+      SELECT 
+        t.*,
+        u.username as owner_name,
+        u.avatar_url,
+        r.id as run_id,
+        r.created_at as run_date
+      FROM territories t
+      LEFT JOIN users u ON t.owner_id = u.id
+      LEFT JOIN runs r ON r.id = t.run_id
+      ${ownerId ? 'WHERE t.owner_id = $1' : ''}
+      ORDER BY t.created_at DESC
+      ${ownerId ? 'LIMIT $2' : 'LIMIT $1'}
+    `;
+    
+    const params = ownerId ? [ownerId, limit] : [limit];
+    const { rows } = await pool.query(query, params);
 
     // Cache for 5 minutes
     await redisSetEx(cacheKey, 300, JSON.stringify(rows));
@@ -56,7 +70,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Territories the user has ever owned/claimed (includes tiles that were later lost)
+// Territories the user has created through their runs
 router.get('/mine-history', requireAuth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '500', 10), 2000);
@@ -67,36 +81,30 @@ router.get('/mine-history', requireAuth, async (req, res) => {
 
     // Field selection
     const selectFields = fields === 'lite' 
-      ? 't.tile_id, t.owner_id, t.activity_type, t.last_claimed'
+      ? 't.id, t.run_id, t.owner_id, t.activity_type, t.created_at, t.distance_km'
       : 't.*';
 
-    const query = `
-      WITH tiles AS (
-        SELECT tile_id FROM territories WHERE owner_id = $1
-        UNION
-        SELECT tile_id FROM territory_history WHERE to_owner = $1
-        UNION
-        SELECT tile_id FROM territory_claims WHERE user_id = $1
-          ${activityType ? 'AND activity_type = $3' : ''}
-      )
-      SELECT ${selectFields}
+    let query = `
+      SELECT ${selectFields}, u.username as owner_name
       FROM territories t
-      JOIN tiles ON tiles.tile_id = t.tile_id
-      ${cursor ? `WHERE t.last_claimed < $${activityType ? '4' : '3'}` : ''}
-      ORDER BY t.last_claimed DESC
-      LIMIT $2
+      LEFT JOIN users u ON t.owner_id = u.id
+      WHERE t.owner_id = $1
+      ${activityType ? 'AND t.activity_type = $2' : ''}
+      ${cursor ? `AND t.created_at < $${activityType ? '3' : '2'}` : ''}
+      ORDER BY t.created_at DESC
+      LIMIT $${limit ? (activityType ? '4' : '3') : (activityType ? '2' : '1')}
     `;
 
-    const params = [];
-    params.push(userId, limit);
+    const params = [userId];
     if (activityType) params.push(activityType);
     if (cursor) params.push(cursor);
+    params.push(limit);
 
     const { rows } = await pool.query(query, params);
     
     // Generate next cursor for pagination
     const nextCursor = rows.length === limit && rows.length > 0
-      ? rows[rows.length - 1].last_claimed
+      ? rows[rows.length - 1].created_at
       : null;
 
     return res.json({ 
@@ -111,74 +119,95 @@ router.get('/mine-history', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/history/:tileId', requireAuth, async (req, res) => {
+// Get detailed territory info by run ID with overlapping territories and user stats
+router.get('/:runId/info', async (req, res) => {
   try {
-    const { tileId } = req.params;
-    const rows = (await pool.query('SELECT * FROM territory_history WHERE tile_id = $1 ORDER BY changed_at DESC LIMIT 50', [tileId])).rows;
-    return res.json({ ok: true, history: rows });
-  } catch (err) {
-    console.error('History fetch failed:', err);
-    return res.status(500).json({ ok: false, error: 'Failed to fetch history' });
-  }
-});
-
-// Get detailed info about a territory (for click popup)
-router.get('/:tileId/info', async (req, res) => {
-  try {
-    const { tileId } = req.params;
+    const { runId } = req.params;
+    const userId = req.user?.id || null;
     
-    // Get territory with owner info and run data
+    // Get main territory with owner info and run data
     const territoryQuery = `
       SELECT 
-        t.tile_id,
+        t.id,
+        t.run_id,
         t.owner_id,
-        t.strength,
-        t.last_claimed,
         t.geojson,
+        t.created_at,
+        t.distance_km,
+        t.activity_type,
         u.username as owner_name,
-        r.distance_km,
-        r.duration_sec,
+        u.avatar_url,
+        r.distance_km as run_distance,
+        r.duration_sec as run_duration,
         r.created_at as run_date
       FROM territories t
       LEFT JOIN users u ON t.owner_id = u.id
-      LEFT JOIN territory_claims tc ON tc.tile_id = t.tile_id 
-        AND tc.user_id = t.owner_id
-      LEFT JOIN runs r ON r.id = tc.run_id
-      WHERE t.tile_id = $1
-      ORDER BY t.last_claimed DESC
+      LEFT JOIN runs r ON r.id = t.run_id
+      WHERE t.run_id = $1
       LIMIT 1
     `;
     
-    const { rows: territoryRows } = await pool.query(territoryQuery, [tileId]);
+    const { rows: territoryRows } = await pool.query(territoryQuery, [runId]);
     
     if (territoryRows.length === 0) {
       return res.status(404).json({ ok: false, error: 'Territory not found' });
     }
+
+    const territory = territoryRows[0];
     
-    // Get history with owner names
-    const historyQuery = `
+    // Get overlapping territories (recent runs from all users)
+    const overlappingQuery = `
       SELECT 
-        th.tile_id,
-        th.from_owner,
-        u1.username as from_owner_name,
-        th.to_owner,
-        u2.username as to_owner_name,
-        th.changed_at
-      FROM territory_history th
-      LEFT JOIN users u1 ON th.from_owner = u1.id
-      LEFT JOIN users u2 ON th.to_owner = u2.id
-      WHERE th.tile_id = $1
-      ORDER BY th.changed_at DESC
+        t.id,
+        t.run_id,
+        t.owner_id,
+        t.distance_km,
+        t.activity_type,
+        t.created_at,
+        u.username as owner_name,
+        u.avatar_url,
+        r.duration_sec,
+        r.distance_km as run_distance
+      FROM territories t
+      LEFT JOIN users u ON t.owner_id = u.id
+      LEFT JOIN runs r ON r.id = t.run_id
+      WHERE t.run_id != $1
+        AND t.created_at >= NOW() - INTERVAL '30 days'
+      ORDER BY t.created_at DESC
+      LIMIT 50
+    `;
+    
+    const { rows: overlappingRows } = await pool.query(overlappingQuery, [runId]);
+    
+    // Get top performers (last 30 days, sorted by distance)
+    const topPerformersQuery = `
+      SELECT 
+        u.id,
+        u.username,
+        u.avatar_url,
+        COUNT(*) as run_count,
+        SUM(t.distance_km) as total_distance,
+        AVG(t.distance_km) as avg_distance,
+        MIN(CASE WHEN r.duration_sec > 0 AND t.distance_km > 0 THEN r.duration_sec / t.distance_km ELSE NULL END) as best_pace_sec_per_km
+      FROM territories t
+      LEFT JOIN users u ON t.owner_id = u.id
+      LEFT JOIN runs r ON r.id = t.run_id
+      WHERE t.created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY u.id, u.username, u.avatar_url
+      ORDER BY total_distance DESC
       LIMIT 10
     `;
     
-    const { rows: historyRows } = await pool.query(historyQuery, [tileId]);
+    const { rows: topPerformersRows } = await pool.query(topPerformersQuery);
     
     return res.json({
       ok: true,
-      territory: {
-        ...territoryRows[0],
-        history: historyRows
+      territory,
+      overlappingTerritories: overlappingRows,
+      topPerformers: topPerformersRows,
+      stats: {
+        totalTerritoriesNearby: overlappingRows.length,
+        topPerformerCount: topPerformersRows.length
       }
     });
   } catch (err) {
@@ -187,118 +216,12 @@ router.get('/:tileId/info', async (req, res) => {
   }
 });
 
-// Get territory context for current location (with user's personal best)
-router.post('/context', requireAuth, async (req, res) => {
-  try {
-    const { lat, lng } = req.body;
-    const userId = req.userId;
-
-    if (!lat || !lng) {
-      return res.status(400).json({ ok: false, error: 'Latitude and longitude required' });
-    }
-
-    // Approximate nearby territories (± ~100-150m) using geohash tiles (no PostGIS dependency)
-    const offsets = [-0.001, 0, 0.001];
-    const candidateTiles = new Set();
-    for (const dLat of offsets) {
-      for (const dLng of offsets) {
-        candidateTiles.add(tileIdFromCoord(lat + dLat, lng + dLng));
-      }
-    }
-
-    const candidateArray = Array.from(candidateTiles);
-    const territories = await pool.query(
-      `SELECT 
-        t.tile_id,
-        t.owner_id,
-        t.last_claimed,
-        t.strength,
-        t.geojson,
-        u.username as owner_name
-      FROM territories t
-      LEFT JOIN users u ON t.owner_id = u.id
-      WHERE t.tile_id = ANY($1)
-      ORDER BY t.last_claimed DESC
-      LIMIT 9`,
-      [candidateArray]
-    );
-
-    // Get user's previous runs in this area (within 50m)
-    const userRunsQuery = `
-      SELECT 
-        r.id,
-        r.distance_km,
-        r.duration_sec,
-        r.created_at,
-        r.raw_points
-      FROM runs r
-      WHERE r.user_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT 50
-    `;
-
-    const userRuns = await pool.query(userRunsQuery, [userId]);
-
-    // Get fastest time for this user in this area
-    let personalBest = null;
-    if (userRuns.rows.length > 0) {
-      const fastestRun = userRuns.rows.reduce((fastest, current) => {
-        const pace = current.duration_sec / current.distance_km;
-        const fastestPace = fastest.duration_sec / fastest.distance_km;
-        return pace < fastestPace ? current : fastest;
-      });
-
-      personalBest = {
-        runId: fastestRun.id,
-        distanceKm: fastestRun.distance_km,
-        durationSec: fastestRun.duration_sec,
-        paceMinPerKm: (fastestRun.duration_sec / 60) / fastestRun.distance_km,
-        date: fastestRun.created_at
-      };
-    }
-
-    // Get territory ownership history
-    const historyQuery = `
-      SELECT 
-        th.tile_id,
-        th.from_owner,
-        th.to_owner,
-        th.changed_at,
-        u1.username as from_owner_name,
-        u2.username as to_owner_name
-      FROM territory_history th
-      LEFT JOIN users u1 ON th.from_owner = u1.id
-      LEFT JOIN users u2 ON th.to_owner = u2.id
-      WHERE th.tile_id = ANY($1)
-      ORDER BY th.changed_at DESC
-      LIMIT 20
-    `;
-
-    const tileIds = territories.rows.map(t => t.tile_id);
-    const history = tileIds.length > 0 
-      ? await pool.query(historyQuery, [tileIds])
-      : { rows: [] };
-
-    return res.json({
-      ok: true,
-      territories: territories.rows,
-      personalBest,
-      timesRunHere: userRuns.rows.length,
-      history: history.rows
-    });
-
-  } catch (err) {
-    console.error('Territory context fetch failed:', err);
-    return res.status(500).json({ ok: false, error: 'Failed to fetch territory context' });
-  }
-});
-
-// Get territories grouped by teams
+// Get territories grouped by activity type
 router.get('/teams', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '500', 10), 2000);
     
-    // Get territories with team information
+    // Get territories with owner information
     const query = `
       SELECT 
         t.tile_id,

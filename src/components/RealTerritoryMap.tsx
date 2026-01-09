@@ -7,22 +7,23 @@ import { Crosshair, Plus, Minus, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { db } from '@/lib/db';
-import { polygonFromTile } from '@/lib/territory';
 
 type Territory = {
-  tile_id: string;
+  id: number;
+  run_id: number;
   owner_id: number;
-  strength: number;
+  owner_name?: string;
+  distance_km: number;
+  activity_type?: 'run' | 'cycle';
+  created_at?: string;
   geojson: {
-    type: 'Feature';
+    type: 'Feature' | 'FeatureCollection';
     geometry: {
-      type: 'Polygon';
-      coordinates: number[][][];
+      type: 'Polygon' | 'LineString';
+      coordinates: number[][][] | number[][];
     };
     properties?: any;
   };
-  team_id?: number;
-  activity_type?: 'run' | 'cycle';
 };
 
 type TeamTerritory = {
@@ -30,8 +31,7 @@ type TeamTerritory = {
   team_name: string;
   team_color: string;
   territories: Territory[];
-  total_strength: number;
-  tile_count: number;
+  total_count: number;
 };
 
 type Run = {
@@ -154,19 +154,6 @@ function CyclingOnlyToggle({ enabled, onToggle, visible }: { enabled: boolean; o
         <span className="text-sm">🚴</span>
         <span className="text-sm font-medium text-gray-700">Cycling Only</span>
         <Switch checked={enabled} onCheckedChange={onToggle} />
-      </div>
-    </div>
-  );
-}
-
-// Toggle between grid tiles and organic run paths
-function ViewModeToggle({ showPaths, onToggle }: { showPaths: boolean; onToggle: (enabled: boolean) => void }) {
-  return (
-    <div className="absolute bottom-44 right-2 z-[800] bg-white rounded-lg shadow-lg p-3 transition-all border border-gray-200">
-      <div className="flex items-center gap-2">
-        <span className="text-sm">{showPaths ? '🏃' : '🔲'}</span>
-        <span className="text-sm font-medium text-gray-700">{showPaths ? 'Run Paths' : 'Grid Tiles'}</span>
-        <Switch checked={showPaths} onCheckedChange={onToggle} />
       </div>
     </div>
   );
@@ -570,9 +557,9 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
   };
 
   // Handle territory click - fetch and show info
-  const handleTerritoryClick = async (tileId: string) => {
+  const handleTerritoryClick = async (runId: number) => {
     try {
-      const response = await apiFetch(`/territories/${tileId}/info`);
+      const response = await apiFetch(`/territories/${runId}/info`);
       setSelectedTerritory(response.territory);
       setShowTerritoryPopup(true);
     } catch (error) {
@@ -699,7 +686,6 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
 
       <ZoomButtons onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
       <LocationButton onLocate={handleLocateUser} />
-      <ViewModeToggle showPaths={showRunPaths} onToggle={setShowRunPaths} />
       <CyclingOnlyToggle enabled={cyclingOnly} onToggle={setCyclingOnly} visible={filter === 'mine'} />
       <TeamToggle enabled={teamViewEnabled} onToggle={setTeamViewEnabled} />
       
@@ -752,7 +738,7 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
             return null;
           })
         ) : teamViewEnabled ? (
-          // Team View: Show territories grouped by teams (grid tiles)
+          // Team View: Show territories grouped by teams
           <>
             {teamTerritories.map((team) => 
               team.territories.map((territory) => {
@@ -764,11 +750,11 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
 
                 return (
                   <Polygon
-                    key={territory.tile_id}
+                    key={territory.run_id}
                     positions={positions}
                     pathOptions={colors}
                     eventHandlers={{
-                      click: () => handleTerritoryClick(territory.tile_id)
+                      click: () => handleTerritoryClick(territory.run_id)
                     }}
                   />
                 );
@@ -784,18 +770,18 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
 
               return (
                 <Polygon
-                  key={territory.tile_id}
+                  key={territory.run_id}
                   positions={positions}
                   pathOptions={colors}
                   eventHandlers={{
-                    click: () => handleTerritoryClick(territory.tile_id)
+                    click: () => handleTerritoryClick(territory.run_id)
                   }}
                 />
               );
             })}
           </>
         ) : (
-          // Individual View: Show territories with personal colors (grid tiles)
+          // Individual View: Show territories with personal colors
           getFilteredTerritories().map((territory) => {
             const coords = territory.geojson?.geometry?.coordinates?.[0] || [];
             if (coords.length === 0) return null;
@@ -818,11 +804,11 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
             return (
               <>
                 <Polygon
-                  key={territory.tile_id}
+                  key={territory.run_id}
                   positions={positions}
                   pathOptions={colors}
                   eventHandlers={{
-                    click: () => handleTerritoryClick(territory.tile_id)
+                    click: () => handleTerritoryClick(territory.run_id)
                   }}
                 />
                 {/* Activity Type Badge */}

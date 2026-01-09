@@ -58,15 +58,13 @@ export async function ensureSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS territories (
       id SERIAL PRIMARY KEY,
-      tile_id TEXT UNIQUE NOT NULL,
+      run_id INTEGER UNIQUE NOT NULL REFERENCES runs(id),
       owner_id INTEGER REFERENCES users(id),
-      strength INTEGER DEFAULT 1,
       geojson JSONB NOT NULL,
-      last_claimed TIMESTAMPTZ DEFAULT NOW()
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      activity_type TEXT,
+      distance_km NUMERIC
     );
-    -- Track activity type for each territory conquest
-    ALTER TABLE territories ADD COLUMN IF NOT EXISTS activity_type TEXT;
-    ALTER TABLE territories ADD COLUMN IF NOT EXISTS conquered_by_run_id INTEGER REFERENCES runs(id);
   `);
 
   await pool.query(`

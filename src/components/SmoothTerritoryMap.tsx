@@ -259,7 +259,7 @@ const SmoothTerritoryMap = ({
               <div>
                 <div className="text-gray-400 text-xs">Distance</div>
                 <div className="text-white text-xl font-bold">
-                  {parseFloat(runData.distance_km).toFixed(2)} km
+                  {(typeof runData.distance_km === 'number' ? runData.distance_km : parseFloat(runData.distance_km)).toFixed(2)} km
                 </div>
               </div>
             </div>
