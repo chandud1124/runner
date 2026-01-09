@@ -281,7 +281,7 @@ router.get('/teams', async (req, res) => {
           distance_km: row.distance_km,
           geojson: row.geojson,
           created_at: row.created_at,
-          activity_type: row.activity_type
+          activity_type: row.activity_type,
           team_id: null
         });
       }

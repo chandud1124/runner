@@ -55,42 +55,25 @@ export async function ensureSchema() {
     ALTER TABLE runs ADD COLUMN IF NOT EXISTS avg_accuracy NUMERIC;
   `);
 
+  // Drop and recreate territories table with new schema
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS territories (
+    DROP TABLE IF EXISTS territories CASCADE;
+    
+    CREATE TABLE territories (
       id SERIAL PRIMARY KEY,
-      run_id INTEGER UNIQUE NOT NULL REFERENCES runs(id),
-      owner_id INTEGER REFERENCES users(id),
+      run_id INTEGER UNIQUE NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       geojson JSONB NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       activity_type TEXT,
-      distance_km NUMERIC
+      distance_km NUMERIC,
+      team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+      ownership_percentage NUMERIC DEFAULT 100
     );
-  `);
-
-  // Migrate from old tile-based schema to run-based schema
-  await pool.query(`
-    DO $$ 
-    BEGIN
-      -- Check if tile_id column exists (old schema)
-      IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'territories' AND column_name = 'tile_id'
-      ) THEN
-        -- Drop old tile-based columns and indexes
-        DROP INDEX IF EXISTS idx_territories_tile_id;
-        ALTER TABLE territories DROP COLUMN IF EXISTS tile_id;
-        ALTER TABLE territories DROP COLUMN IF EXISTS strength;
-        ALTER TABLE territories DROP COLUMN IF EXISTS last_claimed;
-        
-        -- Add run_id if it doesn't exist
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'territories' AND column_name = 'run_id'
-        ) THEN
-          ALTER TABLE territories ADD COLUMN run_id INTEGER UNIQUE REFERENCES runs(id);
-        END IF;
-      END IF;
-    END $$;
+    
+    CREATE INDEX idx_territories_run_id ON territories(run_id);
+    CREATE INDEX idx_territories_owner ON territories(owner_id);
+    CREATE INDEX idx_territories_team ON territories(team_id) WHERE team_id IS NOT NULL;
   `);
 
   await pool.query(`
