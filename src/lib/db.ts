@@ -34,8 +34,19 @@ export class TerritoryRunDB extends Dexie {
 
   constructor() {
     super('TerritoryRunDB');
+    
+    // Version 1: Original schema with territories table
     this.version(1).stores({
       runs: '++id, synced, timestamp',
+      territories: 'tileId, ownerId, lastUpdated', // Old schema
+      userProfile: 'id, lastSynced',
+      syncQueue: '++id, type, timestamp'
+    });
+    
+    // Version 2: Remove territories table (now fetched from API)
+    this.version(2).stores({
+      runs: '++id, synced, timestamp',
+      territories: null, // Delete the table
       userProfile: 'id, lastSynced',
       syncQueue: '++id, type, timestamp'
     });
