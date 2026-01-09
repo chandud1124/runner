@@ -374,22 +374,13 @@ const ActiveRun = () => {
         return;
       }
 
-      // Calculate territory acquisition locally
-      const localTerritories = new Map(
-        (await db.territories.toArray()).map(t => [t.tileId, { ownerId: t.ownerId, strength: t.strength }])
-      );
+      // Calculate territory acquisition locally using in-memory Map
+      // (no longer persisting to IndexedDB to avoid schema conflicts)
+      const localTerritories = new Map<string, { ownerId: string; strength: number }>();
       const { touchedTiles, updatedTiles } = calculateTerritoryAcquisition(points, user!.id.toString(), localTerritories);
 
-      // Update local territories
-      for (const update of updatedTiles) {
-        await db.territories.put({
-          tileId: update.tileId,
-          ownerId: update.ownerId,
-          strength: update.strength,
-          geometry: null, // We'll compute on demand
-          lastUpdated: Date.now()
-        });
-      }
+      // Note: Local territories are calculated but not persisted to IndexedDB
+      // They're used for visual feedback during the run and sync to server
 
       // Store run locally
       const runId = await db.runs.add({
