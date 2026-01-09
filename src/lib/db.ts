@@ -12,10 +12,14 @@ export interface Run {
 }
 
 export interface Territory {
-  tileId: string;
+  tileId: string; // Unique key: run-{runId}
+  runId?: number;
   ownerId: string;
-  strength: number;
+  ownerName?: string;
+  distance_km?: number;
+  activity_type?: string;
   geometry: any; // GeoJSON polygon
+  created_at?: string;
   lastUpdated: number;
 }
 

@@ -162,14 +162,19 @@ function CyclingOnlyToggle({ enabled, onToggle, visible }: { enabled: boolean; o
 type MapFilter = 'mine' | 'friends' | 'present';
 
 type TerritoryInfo = {
-  tile_id: string;
+  tile_id?: string;
+  run_id?: number;
   owner_id: number;
   owner_name: string;
-  strength: number;
-  last_claimed: string;
+  avatar_url?: string;
   distance_km?: number;
   duration_sec?: number;
-  history: Array<{
+  run_duration?: number;
+  activity_type?: string;
+  created_at?: string;
+  last_claimed?: string;
+  strength?: number; // Optional for backwards compatibility
+  history?: Array<{
     from_owner: number;
     from_owner_name: string;
     to_owner: number;
@@ -303,8 +308,12 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
         if (validCache.length > 0) {
           const territoriesFromCache = validCache.map(t => ({
             tile_id: t.tileId,
+            run_id: t.runId,
             owner_id: parseInt(t.ownerId),
-            strength: t.strength,
+            owner_name: t.ownerName,
+            distance_km: t.distance_km,
+            activity_type: t.activity_type,
+            created_at: t.created_at,
             geojson: t.geometry || polygonFromTile(t.tileId)
           }));
           setTerritories(territoriesFromCache);
@@ -336,16 +345,23 @@ const RealTerritoryMap = ({ center, zoom = 13, showRuns = false, filter = 'prese
         setIndividualTerritories(teamTerrData.individual || []);
         setRuns(runData.runs || []);
         
-        // Cache territories
+        // Cache territories with new schema (run_id instead of tile_id)
         await db.territories.clear();
         for (const terr of terrData.territories || []) {
-          await db.territories.put({
-            tileId: terr.tile_id,
-            ownerId: terr.owner_id.toString(),
-            strength: terr.strength,
-            geometry: terr.geojson,
-            lastUpdated: Date.now()
-          });
+          // Only cache if it has a valid run_id (key field)
+          if (terr.run_id) {
+            await db.territories.put({
+              tileId: `run-${terr.run_id}`, // Unique identifier based on run_id
+              runId: terr.run_id,
+              ownerId: terr.owner_id?.toString() || '',
+              ownerName: terr.owner_name || 'Unknown',
+              distance_km: terr.distance_km,
+              activity_type: terr.activity_type,
+              geometry: terr.geojson,
+              created_at: terr.created_at,
+              lastUpdated: Date.now()
+            });
+          }
         }
         
         // Get user's team ID
