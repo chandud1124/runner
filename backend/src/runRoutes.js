@@ -320,21 +320,6 @@ router.post('/sync', requireAuth, async (req, res) => {
       }
 
       await client.query('COMMIT');
-      console.log(`[SYNC] Completed syncing ${syncedRuns.length} runs`);
-
-      // Invalidate caches
-      await redisDel('territories:all:*');
-      await redisDel(`territories:${req.userId}:*`);
-      const owned = ownedRows[0].c || 0;
-      // Approximate per-tile area for geohash precision 7 (~0.02 km^2)
-      const areaPerTileKm2 = 0.02;
-      const areaKm2 = owned * areaPerTileKm2;
-      await client.query(
-        'UPDATE user_stats SET territories_owned = $1, area_km2 = $2, updated_at = NOW() WHERE user_id = $3',
-        [owned, areaKm2, req.userId]
-      );
-
-      await client.query('COMMIT');
       console.log(`[SYNC] Successfully synced ${syncedRuns.length}/${runs.length} runs for user ${req.userId}`);
 
       // Invalidate territory caches
