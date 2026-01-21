@@ -17,7 +17,7 @@ This entire application was **completely built using AI tools** and successfully
 
 ### Access the Live App
 
-**URL**: [Territory Runner - Live Demo](https://territory-runner-ai.vercel.app)
+**URL**: [Territory Runner - Live Demo](https://territoryrunner.vercel.app)
 
 ### Cloud Infrastructure
 
@@ -26,7 +26,7 @@ The application is deployed across multiple cloud platforms:
 #### Frontend
 - **Host**: [Vercel](https://vercel.com)
 - **Framework**: React + Vite + TypeScript
-- **URL**: https://territory-runner-ai.vercel.app
+- **URL**: https://territoryrunner.vercel.app
 - **Auto-deployed** from main branch
 
 #### Backend API
